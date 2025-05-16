@@ -6,7 +6,8 @@ enum Token {
     Plus,
     Assign,
     Semicolon,
-    EOF
+    EOF,
+    Unknown(String)
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {
@@ -15,28 +16,28 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     input.chars().for_each(|character| {
         match character {
             ' ' => {
-                if current_string.len() > 0 {
+                if string_has_non_whitespace(&current_string) {
                     evaluate_current_string(&mut tokens, &current_string);
                     current_string.clear();
                 }
                 current_string.clear();
             },
             '=' => {
-                if current_string.len() > 0 {
+                if string_has_non_whitespace(&current_string) {
                     evaluate_current_string(&mut tokens, &current_string);
                     current_string.clear();
                 }
                 tokens.push(Token::Assign);
             },
             '+' => {
-                if current_string.len() > 0 {
+                if string_has_non_whitespace(&current_string) {
                     evaluate_current_string(&mut tokens, &current_string);
                     current_string.clear();
                 }
                 tokens.push(Token::Plus);
             },
             ';' => {
-                if current_string.len() > 0 {
+                if string_has_non_whitespace(&current_string) {
                     evaluate_current_string(&mut tokens, &current_string);
                     current_string.clear();
                 }
@@ -56,9 +57,20 @@ fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &String) {
         tokens.push(Token::Let)
     } else if is_string_a_number(current_string) {
         tokens.push(Token::Number(convert_string_to_f64(current_string)));
-    } else if tokens.len() > 0 && *tokens.last().unwrap() == Token::Let {
+    } else if last_token_was_let(tokens) || ident_token_exists(tokens, current_string){
         tokens.push(Token::Ident(current_string.clone()));
+    } else {
+        println!("current_string {} not evaluated to token!", current_string);
+        tokens.push(Token::Unknown(current_string.clone()));
     }
+}
+
+fn ident_token_exists(tokens: &mut Vec<Token>, current_string: &String) -> bool {
+    tokens.contains(&Token::Ident(current_string.to_string()))
+}
+
+fn last_token_was_let(tokens: &mut Vec<Token>) -> bool {
+    tokens.len() > 0 && *tokens.last().unwrap() == Token::Let
 }
 
 fn is_string_a_number(current_string: &String) -> bool {
@@ -68,6 +80,10 @@ fn is_string_a_number(current_string: &String) -> bool {
 
 fn convert_string_to_f64(current_string: &String) -> f64 {
     current_string.parse::<f64>().unwrap()
+}
+
+fn string_has_non_whitespace(current_string: &String) -> bool {
+    current_string.trim().len() > 0
 }
 
 #[cfg(test)]
@@ -123,4 +139,27 @@ mod tests {
         let result = tokenize(BASIC_TEST_STRING);
         assert_eq!(result[7], Token::EOF);
     }
+
+    static TEST_STRING_WITH_REASSIGNMENT: &str = "
+    let x = 3 + 4;
+    x = 9;
+    ";
+
+    #[test]
+    fn it_finds_previously_used_ident() {
+        let result = tokenize(TEST_STRING_WITH_REASSIGNMENT);
+        assert_eq!(result[7], Token::Ident("x".to_string()));
+    }
+
+    static TEST_STRING_WITH_UNKNOWN_IDENT: &str = "
+    let x = 3 + 4;
+    sum = 9;
+    ";
+    
+    #[test]
+    fn it_captures_unidentified_tokens() {
+        let result = tokenize(TEST_STRING_WITH_UNKNOWN_IDENT);
+        assert_eq!(result[7], Token::Unknown("sum".to_string()));
+    }
+
 }
