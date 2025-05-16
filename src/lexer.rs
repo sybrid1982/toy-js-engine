@@ -4,6 +4,9 @@ enum Token {
     Ident(String),
     Number(f64),
     Plus,
+    Minus,
+    Star,
+    Slash,
     Assign,
     Semicolon,
     EOF,
@@ -17,29 +20,43 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         match character {
             ' ' => {
                 if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &current_string);
-                    current_string.clear();
+                    evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 current_string.clear();
             },
             '=' => {
                 if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &current_string);
-                    current_string.clear();
+                    evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 tokens.push(Token::Assign);
             },
             '+' => {
                 if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &current_string);
-                    current_string.clear();
+                    evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 tokens.push(Token::Plus);
             },
+            '-' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::Minus);
+            },
+            '*' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::Star);
+            },
+            '/' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::Slash);
+            },
             ';' => {
                 if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &current_string);
-                    current_string.clear();
+                    evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 tokens.push(Token::Semicolon);
             }
@@ -52,7 +69,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     tokens
 }
 
-fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &String) {
+fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String) {
     if *current_string == "let" {
         tokens.push(Token::Let)
     } else if is_string_a_number(current_string) {
@@ -63,6 +80,7 @@ fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &String) {
         println!("current_string {} not evaluated to token!", current_string);
         tokens.push(Token::Unknown(current_string.clone()));
     }
+    current_string.clear();
 }
 
 fn ident_token_exists(tokens: &mut Vec<Token>, current_string: &String) -> bool {
@@ -155,11 +173,29 @@ mod tests {
     let x = 3 + 4;
     sum = 9;
     ";
-    
+
     #[test]
     fn it_captures_unidentified_tokens() {
         let result = tokenize(TEST_STRING_WITH_UNKNOWN_IDENT);
         assert_eq!(result[7], Token::Unknown("sum".to_string()));
+    }
+
+    #[test]
+    fn it_parses_minus() {
+        let result = tokenize("-");
+        assert_eq!(result[0], Token::Minus);
+    }
+
+    #[test]
+    fn it_parses_star() {
+        let result = tokenize("*");
+        assert_eq!(result[0], Token::Star);
+    }
+
+    #[test]
+    fn it_parses_slash() {
+        let result = tokenize("/");
+        assert_eq!(result[0], Token::Slash);
     }
 
 }
