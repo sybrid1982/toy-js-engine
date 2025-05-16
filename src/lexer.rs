@@ -15,12 +15,18 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     input.chars().for_each(|character| {
         match character {
             ' ' => {
-                if current_string == "let" {
-                    tokens.push(Token::Let)
-                } else if tokens.len() > 0 && *tokens.last().unwrap() == Token::Let {
-                    tokens.push(Token::Ident(current_string.clone()));
+                if current_string.len() > 0 {
+                    evaluate_current_string(&mut tokens, &current_string);
+                    current_string.clear();
                 }
                 current_string.clear();
+            },
+            '=' => {
+                if current_string.len() > 0 {
+                    evaluate_current_string(&mut tokens, &current_string);
+                    current_string.clear();
+                }
+                tokens.push(Token::Assign);
             },
             _ => {
                 current_string.push(character);
@@ -28,6 +34,14 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
     });
     tokens
+}
+
+fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &String) {
+    if *current_string == "let" {
+        tokens.push(Token::Let)
+    } else if tokens.len() > 0 && *tokens.last().unwrap() == Token::Let {
+        tokens.push(Token::Ident(current_string.clone()));
+    }
 }
 
 #[cfg(test)]
@@ -46,5 +60,11 @@ mod tests {
     fn it_parses_ident() {
         let result = tokenize(BASIC_TEST_STRING);
         assert_eq!(result[1], Token::Ident("x".to_string()));
+    }
+
+    #[test]
+    fn it_parses_assign() {
+        let result = tokenize(BASIC_TEST_STRING);
+        assert_eq!(result[2], Token::Assign);
     }
 }
