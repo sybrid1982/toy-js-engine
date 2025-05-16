@@ -1,0 +1,1 @@
+This will be a very simple javascript toy engine written in rust for my own educational purposes.
