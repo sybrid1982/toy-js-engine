@@ -2,20 +2,8 @@
 pub enum Expression {
     NumberLiteral(f64),
     Identifier(String),
+    Prefix(Operator, Box<Expression>),
     Operation(Box<Expression>, Operator, Box<Expression>)
-}
-
-impl Expression {
-    pub fn is_number_literal(&self) -> bool {
-        match self {
-            Expression::NumberLiteral(_) => {
-                true
-            },
-            _ => {
-                false
-            }
-        }
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -30,4 +18,5 @@ pub enum Operator {
     Subtract,
     Multiply,
     Divide,
+    Equal
 }
