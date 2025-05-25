@@ -197,5 +197,4 @@ mod tests {
         let result = tokenize("/");
         assert_eq!(result[0], Token::Slash);
     }
-
 }

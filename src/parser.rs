@@ -47,7 +47,7 @@ impl Parser {
     }
 
     fn parse_let(&mut self) -> Option<Statement> {
-        self.advance(); // consume 'let'
+        self.advance();
         if let Token::Ident(name) = self.advance() {
             if self.expect(&Token::Assign) {
                 let expr = self.parse_expression();
