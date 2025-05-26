@@ -65,6 +65,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
         }
     });
+    if string_has_non_whitespace(&current_string) {
+        evaluate_current_string(&mut tokens, &mut current_string);
+    }
     tokens.push(Token::EOF);
     tokens
 }
@@ -196,5 +199,17 @@ mod tests {
     fn it_parses_slash() {
         let result = tokenize("/");
         assert_eq!(result[0], Token::Slash);
+    }
+
+    #[test]
+    fn it_parses_without_semicolon() {
+        let result = tokenize("1 + 2");
+        let expected = [
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
     }
 }

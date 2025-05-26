@@ -60,3 +60,26 @@ mod tests {
         assert_eq!(eval_expression(expression, &env), 15.0);
     }
 }
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use crate::lexer::tokenize;
+    use crate::parser::Parser;
+
+    #[test]
+    fn line_without_semicolon() {
+        let input = "3 + 5";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 8.0);
+    }
+}

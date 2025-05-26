@@ -22,4 +22,3 @@ fn main() {
         eval_statements(statements, &mut env);
     }
 }
-
