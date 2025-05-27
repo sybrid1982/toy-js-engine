@@ -98,4 +98,20 @@ mod integration_tests {
         };
         assert_eq!(eval_expression(expression.clone(), &env), 10.0);
     }
+
+    #[test]
+    fn negation_of_parentheses() {
+        let input = "-(3+2);";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), -5.0);
+    }
 }

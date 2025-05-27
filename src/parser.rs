@@ -109,21 +109,21 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> Expression {
-        let mut expr = self.parse_sub_expressions();
+        let mut expr = self.parse_sub_expression();
         while matches!(self.peek(), Token::Star | Token::Slash) {
             let operator = match self.advance() {
                 Token::Star => Operator::Multiply,
                 Token::Slash => Operator::Divide,
                 _ => unreachable!(),
             };
-            let right = self.parse_sub_expressions();
+            let right = self.parse_sub_expression();
             expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
         }
         expr
     }
 
     
-    fn parse_sub_expressions(&mut self) -> Expression {
+    fn parse_sub_expression(&mut self) -> Expression {
         // Want to handle expressions in parentheses
         // for example, a + b * c and (a + b) * c should have different results
         // in the first case, the current logic holds.  we first find b * c, make that the
@@ -169,7 +169,7 @@ impl Parser {
         match self.peek() {
             Token::Minus => {
                 self.advance();
-                let right = self.parse_unary();
+                let right = self.parse_sub_expression();
                 Expression::Prefix(Operator::Subtract, Box::new(right))
             }
             _ => self.parse_primary(),
@@ -325,6 +325,25 @@ mod tests {
                 ),
                 Operator::Multiply,
                 Box::new(Expression::NumberLiteral(3.0))
+            ));
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_negate_with_parens() {
+        let tokens = vec![Token::Minus, Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::RightParen, Token::Semicolon];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Prefix(
+                Operator::Subtract,
+                Box::new(
+                    Expression::Operation(
+                        Box::new(Expression::NumberLiteral(5.0)),
+                        Operator::Add,
+                        Box::new(Expression::NumberLiteral(2.0)),
+                    ),
+                ),
             ));
         assert_eq!(result[0], expected);
     }
