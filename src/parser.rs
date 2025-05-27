@@ -206,15 +206,15 @@ mod tests {
 
     #[test]
     fn it_should_interpret_numbers_as_number_expressions() {
-        let tokens = vec![Token::Number(24f64), Token::Semicolon];
+        let tokens = vec![Token::Number(24.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        assert_eq!(result[0], Statement::ExpressionStatement(Expression::NumberLiteral(24f64)));
+        assert_eq!(result[0], Statement::ExpressionStatement(Expression::NumberLiteral(24.0)));
     }
 
     #[test]
     fn it_should_interpret_number_plus_number_as_operation() {
-        let tokens = vec![Token::Number(5f64), Token::Plus, Token::Number(3f64), Token::Semicolon];
+        let tokens = vec![Token::Number(5.0), Token::Plus, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn it_should_interpret_number_times_number_as_operation() {
-        let tokens = vec![Token::Number(5f64), Token::Star, Token::Number(3f64), Token::Semicolon];
+        let tokens = vec![Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn it_should_obey_order_of_operations() {
-        let tokens = vec![Token::Number(5f64), Token::Plus, Token::Number(2f64), Token::Star, Token::Number(3f64), Token::Semicolon];
+        let tokens = vec![Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::Star, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
@@ -253,9 +253,9 @@ mod tests {
                 Operator::Add,
                 Box::new(
                     Expression::Operation(
-                        Box::new(Expression::NumberLiteral(2f64)),
+                        Box::new(Expression::NumberLiteral(2.0)),
                         Operator::Multiply,
-                        Box::new(Expression::NumberLiteral(3f64))
+                        Box::new(Expression::NumberLiteral(3.0))
                     )
                 ),
             ),
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn it_should_handle_let_assignment() {
-        let tokens = vec![Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5f64), Token::Star, Token::Number(3f64), Token::Semicolon];
+        let tokens = vec![Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::Let(String::from("my_var"), Expression::Operation(
@@ -279,7 +279,7 @@ mod tests {
     #[test]
     fn it_should_handle_let_assignment_to_second_variable() {
         let tokens = vec![
-            Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5f64), Token::Star, Token::Number(3f64), Token::Semicolon,   // let my_var = 5 & 3;
+            Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon,   // let my_var = 5 & 3;
             Token::Let, Token::Ident(String::from("my_other_var")), Token::Assign, Token::Ident(String::from("my_var")),  Token::Semicolon,             // let my_other_var = my_var
         ];
         let mut parser = Parser::new(tokens);
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn it_should_handle_simple_math_wrapped_in_parentheses() {
-        let tokens = vec![Token::LeftParen, Token::Number(5f64), Token::Plus, Token::Number(3f64), Token::RightParen, Token::Semicolon];
+        let tokens = vec![Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(3.0), Token::RightParen, Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn it_should_obey_order_of_operations_with_parens() {
-        let tokens = vec![Token::LeftParen, Token::Number(5f64), Token::Plus, Token::Number(2f64), Token::RightParen, Token::Star, Token::Number(3f64), Token::Semicolon];
+        let tokens = vec![Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::RightParen, Token::Star, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(

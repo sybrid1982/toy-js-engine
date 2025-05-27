@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn it_parses_a_number() {
         let result = tokenize(BASIC_TEST_STRING);
-        assert_eq!(result[3], Token::Number(3f64));
+        assert_eq!(result[3], Token::Number(3.0));
     }
 
     #[test]
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn it_parses_a_second_number() {
         let result = tokenize(BASIC_TEST_STRING);
-        assert_eq!(result[5], Token::Number(4f64));
+        assert_eq!(result[5], Token::Number(4.0));
     }
 
     #[test]
