@@ -72,7 +72,7 @@ impl Parser {
     fn parse_let(&mut self) -> Option<Statement> {
         self.advance();
         if let Token::Ident(name) = self.advance() {
-            if self.expect(&Token::Assign) {
+            if self.expect(&Token::Equals) {
                 let expr = self.parse_expression();
                 self.expect(&Token::Semicolon);
                 Some(Statement::Let(name.clone(), expr))
@@ -91,7 +91,29 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
-        self.parse_term()
+        self.parse_comparator()
+    }
+
+    fn parse_comparator(&mut self) -> Expression {
+        let mut expr = self.parse_term();
+        while matches!(self.peek(), Token::LeftChevron | Token::RightChevron | Token::Equals) {
+            let operator = match self.advance() {
+                Token::LeftChevron => Operator::LessThan,
+                Token::RightChevron => Operator::GreaterThan,
+                Token::Equals => {
+                    if self.peek() == &Token::Equals {
+                        self.advance();
+                        Operator::Equal
+                    } else {
+                        Operator::Equal
+                    }
+                },
+                _ => unreachable!(),
+            };
+            let right = self.parse_term();
+            expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
+        }
+        expr
     }
 
     fn parse_term(&mut self) -> Expression {
@@ -121,20 +143,9 @@ impl Parser {
         }
         expr
     }
-
     
     fn parse_sub_expression(&mut self) -> Expression {
-        // Want to handle expressions in parentheses
-        // for example, a + b * c and (a + b) * c should have different results
-        // in the first case, the current logic holds.  we first find b * c, make that the
-        // left expression, and then can put in a second expression with the right side
-        // as a, and the left side as b * c, with the operator as +
-
-        // in the second case, we would want to instead first box a + b as an expression, and then
-        // use that as the left side of the second expression, with the higher order expression being
-        // box<a + b>, *, and c.
-
-        // a sub expression has higher priority than parsing factors, but lower than a unary (I think?)
+        // a sub expression has higher priority than parsing factors, but lower than a unary
         let mut sub_level = 0;
         match self.peek() {
             Token::LeftParen => {
@@ -184,21 +195,6 @@ impl Parser {
         }
     }
 }
-
-/// Scratchpad for thoughts on further work
-// fn parse_sub_expressions(&mut self) -> Expression {
-    // Want to handle expressions in parentheses
-    // for example, a + b * c and (a + b) * c should have different results
-    // in the first case, the current logic holds.  we first find b * c, make that the
-    // left expression, and then can put in a second expression with the right side
-    // as a, and the left side as b * c, with the operator as +
-
-    // in the second case, we would want to instead first box a + b as an expression, and then
-    // use that as the left side of the second expression, with the higher order expression being
-    // box<a + b>, *, and c.
-
-    // a sub expression has higher priority than parsing factors, but lower than a unary (I think?)
-// }
 
 #[cfg(test)]
 mod tests {
@@ -265,7 +261,7 @@ mod tests {
 
     #[test]
     fn it_should_handle_let_assignment() {
-        let tokens = vec![Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
+        let tokens = vec![Token::Let, Token::Ident(String::from("my_var")), Token::Equals, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::Let(String::from("my_var"), Expression::Operation(
@@ -279,8 +275,8 @@ mod tests {
     #[test]
     fn it_should_handle_let_assignment_to_second_variable() {
         let tokens = vec![
-            Token::Let, Token::Ident(String::from("my_var")), Token::Assign, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon,   // let my_var = 5 & 3;
-            Token::Let, Token::Ident(String::from("my_other_var")), Token::Assign, Token::Ident(String::from("my_var")),  Token::Semicolon,             // let my_other_var = my_var
+            Token::Let, Token::Ident(String::from("my_var")), Token::Equals, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon,   // let my_var = 5 & 3;
+            Token::Let, Token::Ident(String::from("my_other_var")), Token::Equals, Token::Ident(String::from("my_var")),  Token::Semicolon,             // let my_other_var = my_var
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
@@ -362,6 +358,67 @@ mod tests {
             Expression::Operation(
                 Box::new(Expression::NumberLiteral(1.0)),
                 Operator::Add,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_less_than() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::LeftChevron,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::LessThan,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_greater_than() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::RightChevron,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::GreaterThan,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_double_equals() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Equals,
+            Token::Equals,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::Equal,
                 Box::new(Expression::NumberLiteral(2.0)),
             ),
         );

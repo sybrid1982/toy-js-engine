@@ -36,10 +36,12 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
                 Operator::Subtract => left - right,
                 Operator::Multiply => left * right,
                 Operator::Divide => left / right,
-                Operator::Equal => {
-                    println!("syntax error?");
-                    right
-                },
+                // Currently treating logic operators like math that only returns 0 or 1
+                // Might want to have a separate class of expressions that are logic expressions instead
+                // that evaluate to true or false
+                Operator::LessThan => if left < right { 1.0 } else { 0.0 },
+                Operator::GreaterThan => if left > right { 1.0 } else { 0.0 },
+                Operator::Equal => if left == right { 1.0 } else { 0.0 },
             }
         }
     }
@@ -113,5 +115,53 @@ mod integration_tests {
             _ => &Expression::NumberLiteral(-255.0)
         };
         assert_eq!(eval_expression(expression.clone(), &env), -5.0);
+    }
+
+    #[test]
+    fn testing_less_than() {
+        let input = "1 < 2;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_less_than_with_math_true() {
+        let input = "1 < 1 + 2;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_less_than_with_math_false() {
+        let input = "1 + 2 < 2;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
     }
 }

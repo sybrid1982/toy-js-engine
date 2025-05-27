@@ -7,11 +7,13 @@ pub enum Token {
     Minus,
     Star,
     Slash,
-    Assign,
+    Equals,
     Semicolon,
     EOF,
     LeftParen,
     RightParen,
+    LeftChevron,
+    RightChevron,
     Unknown(String)
 }
 
@@ -30,7 +32,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 if string_has_non_whitespace(&current_string) {
                     evaluate_current_string(&mut tokens, &mut current_string);
                 }
-                tokens.push(Token::Assign);
+                tokens.push(Token::Equals);
             },
             '+' => {
                 if string_has_non_whitespace(&current_string) {
@@ -74,6 +76,19 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 tokens.push(Token::RightParen);
             },
+            '<' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::LeftChevron);
+            },
+            '>' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::RightChevron);
+            },
+
             _ => {
                 current_string.push(character);
             }
@@ -142,7 +157,7 @@ mod tests {
     #[test]
     fn it_parses_assign() {
         let result = tokenize(BASIC_TEST_STRING);
-        assert_eq!(result[2], Token::Assign);
+        assert_eq!(result[2], Token::Equals);
     }
 
     #[test]
@@ -266,4 +281,20 @@ mod tests {
         ];
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn it_parses_chevrons() {
+        let result = tokenize(
+            "1 <> 2"
+        );
+        let expected = [
+            Token::Number(1.0),
+            Token::LeftChevron,
+            Token::RightChevron,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
 }
