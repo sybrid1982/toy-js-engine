@@ -294,4 +294,22 @@ mod integration_tests {
         };
         assert_eq!(eval_expression(expression.clone(), &env), 0.0);
     }
+
+    #[test]
+    fn testing_more_complicated_logic() {
+        let input = "let x = 3;  x > 2 && true";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        eval_statements(statements, &mut env);
+        assert_eq!(env.get("x").unwrap_or(-255.0), 3.0);
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
 }
