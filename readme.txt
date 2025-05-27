@@ -1,9 +1,8 @@
 This will be a very simple javascript toy engine written in rust for my own educational purposes.
 
-Currently does basic math (without parentheses) and variable assignment (of numbers)
+Currently does basic math and variable assignment (of numbers)
 
 To do:
-Add parentheses for math
 Add functions
 Add logical operators
 Add conditionals

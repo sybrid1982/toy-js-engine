@@ -329,4 +329,23 @@ mod tests {
         assert_eq!(result[0], expected);
     }
 
+    #[test]
+    fn it_should_handle_tokens_without_semicolon() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::Add,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
 }

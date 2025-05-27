@@ -109,12 +109,12 @@ fn last_token_was_let(tokens: &mut Vec<Token>) -> bool {
 }
 
 fn is_string_a_number(current_string: &String) -> bool {
-    let result = current_string.parse::<f64>();
+    let result = current_string.trim().parse::<f64>();
     result.is_ok()
 }
 
 fn convert_string_to_f64(current_string: &String) -> f64 {
-    current_string.parse::<f64>().unwrap()
+    current_string.trim().parse::<f64>().unwrap()
 }
 
 fn string_has_non_whitespace(current_string: &String) -> bool {
@@ -236,6 +236,32 @@ mod tests {
             Token::Plus,
             Token::Number(2.0),
             Token::RightParen,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_without_spaces() {
+        let result = tokenize("1+2");
+        let expected = [
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_ending_in_return() {
+        let result = tokenize(
+            "1+2\n"
+        );
+        let expected = [
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
             Token::EOF
         ];
         assert_eq!(result, expected);

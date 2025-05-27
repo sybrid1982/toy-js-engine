@@ -16,6 +16,10 @@ fn main() {
         print!("> ");
         std::io::stdin().read_line(&mut input).unwrap();
 
+        if input.trim().len() == 0 {
+            break;
+        }
+
         let tokens = tokenize(&input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
