@@ -1,5 +1,26 @@
 use crate::{ast::{Expression, Operator, Statement}, lexer::Token};
 
+/// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
+/// This precedence is generally held, except in certain cases (short circuiting).  For instance, a || (b + c) will not evaluate the b + c side if a is true.
+/// 18: grouping
+/// 17: access and call
+/// 16: new (without argument list)
+/// 15: postfix operators (EX: x++, y--)
+/// 14: prefix operators (EX: ++x, --y, !x, +x, -x, typeof x, void x, delete x, await x)
+/// 13: exponentiation (right to left associativity, x ** y)
+/// 12: multiplicative operators
+/// 11: additive operators
+/// 10: bitwise shift
+/// 9: relational operators (<, <=, >, >=)
+/// 8: equality operators (==, !=, ===, !==)
+/// 7: bitwise AND
+/// 6: bitwise XOR (x ^ y)
+/// 5: bitwise OR
+/// 4: logical AND
+/// 3: logical OR and nullish coalescing (ie x ?? y)
+/// 2: assignment operations (=, *=, -=, ??=, etc), ternary operator, arrow, yield, spread
+/// 1: comma
+
 pub struct Parser {
     tokens: Vec<Token>,
     position: usize
@@ -91,23 +112,57 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
-        self.parse_comparator()
+        self.parse_logical_or()
     }
 
+    // priority level 3
+    fn parse_logical_or(&mut self) -> Expression {
+        let mut expr = self.parse_logical_and();
+        while self.peek() == &Token::Pipe && self.peek_at(self.position + 1) == &Token::Pipe {
+            self.advance();
+            self.advance(); // consume both pipes
+            let right = self.parse_logical_and();
+            expr = Expression::Operation(Box::new(expr), Operator::Or, Box::new(right));
+        }
+        expr
+    }
+
+    // priority level 4
+    fn parse_logical_and(&mut self) -> Expression {
+        let mut expr = self.parse_equality();
+        while self.peek() == &Token::Ampersand && self.peek_at(self.position + 1) == &Token::Ampersand {
+            self.advance();
+            self.advance(); // consume both ampersands
+            let right = self.parse_equality();
+            expr = Expression::Operation(Box::new(expr), Operator::And, Box::new(right));
+        }
+        expr
+    }
+
+    // Priority level 8
+    fn parse_equality(&mut self) -> Expression {
+        let mut expr = self.parse_comparator();
+        while self.peek() == &Token::Equals {
+            match self.peek_at(self.position + 1) {
+                Token::Equals => {
+                    self.advance();
+                    self.advance(); // consume both ampersands
+                    let right = self.parse_comparator();
+                    expr = Expression::Operation(Box::new(expr), Operator::Equal, Box::new(right));
+                },
+                _ => {}
+            }
+        }
+        expr
+    }
+
+    /// priority level 9
     fn parse_comparator(&mut self) -> Expression {
         let mut expr = self.parse_term();
-        while matches!(self.peek(), Token::LeftChevron | Token::RightChevron | Token::Equals) {
+        while matches!(self.peek(), Token::LeftChevron | Token::RightChevron) {
             let operator = match self.advance() {
                 Token::LeftChevron => Operator::LessThan,
                 Token::RightChevron => Operator::GreaterThan,
-                Token::Equals => {
-                    if self.peek() == &Token::Equals {
-                        self.advance();
-                        Operator::Equal
-                    } else {
-                        Operator::Equal
-                    }
-                },
                 _ => unreachable!(),
             };
             let right = self.parse_term();
@@ -116,6 +171,7 @@ impl Parser {
         expr
     }
 
+    /// priority level 11
     fn parse_term(&mut self) -> Expression {
         let mut expr = self.parse_factor();
         while matches!(self.peek(), Token::Plus | Token::Minus) {
@@ -130,22 +186,35 @@ impl Parser {
         expr
     }
 
+    /// priority level 12
     fn parse_factor(&mut self) -> Expression {
-        let mut expr = self.parse_sub_expression();
+        let mut expr = self.parse_unary();
         while matches!(self.peek(), Token::Star | Token::Slash) {
             let operator = match self.advance() {
                 Token::Star => Operator::Multiply,
                 Token::Slash => Operator::Divide,
                 _ => unreachable!(),
             };
-            let right = self.parse_sub_expression();
+            let right = self.parse_unary();
             expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
         }
         expr
     }
-    
+
+    /// priority level 14
+    fn parse_unary(&mut self) -> Expression {
+        match self.peek() {
+            Token::Minus => {
+                self.advance();
+                let right = self.parse_sub_expression();
+                Expression::Prefix(Operator::Subtract, Box::new(right))
+            }
+            _ => self.parse_sub_expression(),
+        }
+    }
+
+    /// priority level 18
     fn parse_sub_expression(&mut self) -> Expression {
-        // a sub expression has higher priority than parsing factors, but lower than a unary
         let mut sub_level = 0;
         match self.peek() {
             Token::LeftParen => {
@@ -171,19 +240,7 @@ impl Parser {
                 sublevel_parser.remove_wrapping_parens();
                 return sublevel_parser.parse_expression();
             },
-            _ => self.parse_unary()
-        }
-    }
-    
-
-    fn parse_unary(&mut self) -> Expression {
-        match self.peek() {
-            Token::Minus => {
-                self.advance();
-                let right = self.parse_sub_expression();
-                Expression::Prefix(Operator::Subtract, Box::new(right))
-            }
-            _ => self.parse_primary(),
+            _ => self.parse_primary()
         }
     }
 
@@ -191,6 +248,7 @@ impl Parser {
         match self.advance() {
             Token::Number(n) => Expression::NumberLiteral(n),
             Token::Ident(name) => Expression::Identifier(name.clone()),
+            Token::Boolean(is_true) => Expression::Boolean(is_true),
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }
@@ -419,6 +477,48 @@ mod tests {
             Expression::Operation(
                 Box::new(Expression::NumberLiteral(1.0)),
                 Operator::Equal,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_double_ampersand() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Ampersand,
+            Token::Ampersand,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::And,
+                Box::new(Expression::NumberLiteral(2.0)),
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_double_pipe() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Pipe,
+            Token::Pipe,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(1.0)),
+                Operator::Or,
                 Box::new(Expression::NumberLiteral(2.0)),
             ),
         );

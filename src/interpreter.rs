@@ -19,6 +19,7 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
     match expression {
         Expression::NumberLiteral(n) => n,
         Expression::Identifier(name) => env.get(&name).unwrap_or(-255.0),
+        Expression::Boolean(is_true) => if is_true { 1.0 } else { 0.0 },
         Expression::Prefix(operator, expression) => {
             let val = eval_expression(*expression, env);
             match operator {
@@ -37,11 +38,12 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
                 Operator::Multiply => left * right,
                 Operator::Divide => left / right,
                 // Currently treating logic operators like math that only returns 0 or 1
-                // Might want to have a separate class of expressions that are logic expressions instead
-                // that evaluate to true or false
                 Operator::LessThan => if left < right { 1.0 } else { 0.0 },
                 Operator::GreaterThan => if left > right { 1.0 } else { 0.0 },
                 Operator::Equal => if left == right { 1.0 } else { 0.0 },
+                // In Javascript, 0 is falsy and all other numbers are truthy
+                Operator::And => if left != 0.0 && right != 0.0 { 1.0 } else { 0.0 },
+                Operator::Or => if left != 0.0 || right != 0.0 { 1.0 } else { 0.0 }
             }
         }
     }
@@ -152,6 +154,134 @@ mod integration_tests {
     #[test]
     fn testing_less_than_with_math_false() {
         let input = "1 + 2 < 2;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
+
+    #[test]
+    fn testing_and_true_true() {
+        let input = "true && true;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_and_true_false() {
+        let input = "true && false;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
+
+    #[test]
+    fn testing_and_false_true() {
+        let input = "false && true;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
+
+    #[test]
+    fn testing_and_false_false() {
+        let input = "false && false;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
+
+    #[test]
+    fn testing_or_true_true() {
+        let input = "true || true;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_or_true_false() {
+        let input = "true || false;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_or_false_true() {
+        let input = "false || true;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_or_false_false() {
+        let input = "false || false;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();

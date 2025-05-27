@@ -14,6 +14,9 @@ pub enum Token {
     RightParen,
     LeftChevron,
     RightChevron,
+    Ampersand,
+    Pipe,
+    Boolean(bool),
     Unknown(String)
 }
 
@@ -88,7 +91,18 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 tokens.push(Token::RightChevron);
             },
-
+            '&' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::Ampersand);
+            },
+            '|' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::Pipe);
+            },
             _ => {
                 current_string.push(character);
             }
@@ -104,6 +118,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String) {
     if *current_string == "let" {
         tokens.push(Token::Let)
+    } else if *current_string == "true" || *current_string == "false" {
+        let bool_value = *current_string == "true";
+        tokens.push(Token::Boolean(bool_value));
     } else if is_string_a_number(current_string) {
         tokens.push(Token::Number(convert_string_to_f64(current_string)));
     } else if last_token_was_let(tokens) || ident_token_exists(tokens, current_string){
@@ -291,6 +308,60 @@ mod tests {
             Token::Number(1.0),
             Token::LeftChevron,
             Token::RightChevron,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_true() {
+        let result = tokenize(
+            "true"
+        );
+        let expected = [
+            Token::Boolean(true),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_false() {
+        let result = tokenize(
+            "false"
+        );
+        let expected = [
+            Token::Boolean(false),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_ampersand() {
+        let result = tokenize(
+            "1 && 2"
+        );
+        let expected = [
+            Token::Number(1.0),
+            Token::Ampersand,
+            Token::Ampersand,
+            Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_pipe() {
+        let result = tokenize(
+            "1 || 2"
+        );
+        let expected = [
+            Token::Number(1.0),
+            Token::Pipe,
+            Token::Pipe,
             Token::Number(2.0),
             Token::EOF
         ];

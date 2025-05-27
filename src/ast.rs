@@ -1,6 +1,7 @@
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     NumberLiteral(f64),
+    Boolean(bool),
     Identifier(String),
     Prefix(Operator, Box<Expression>),
     Operation(Box<Expression>, Operator, Box<Expression>)
@@ -20,5 +21,7 @@ pub enum Operator {
     Divide,
     Equal,
     LessThan,
-    GreaterThan
+    GreaterThan,
+    And,
+    Or
 }
