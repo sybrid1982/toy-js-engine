@@ -82,4 +82,20 @@ mod integration_tests {
         };
         assert_eq!(eval_expression(expression.clone(), &env), 8.0);
     }
+
+    #[test]
+    fn math_with_parentheses() {
+        let input = "(3 + 2) * (3 - 1);";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression
+            },
+            _ => &Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression.clone(), &env), 10.0);
+    }
 }

@@ -10,6 +10,8 @@ pub enum Token {
     Assign,
     Semicolon,
     EOF,
+    LeftParen,
+    RightParen,
     Unknown(String)
 }
 
@@ -59,7 +61,19 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 tokens.push(Token::Semicolon);
-            }
+            },
+            '(' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::LeftParen);
+            },
+            ')' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::RightParen);
+            },
             _ => {
                 current_string.push(character);
             }
@@ -208,6 +222,20 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_parentheses() {
+        let result = tokenize("(1 + 2)");
+        let expected = [
+            Token::LeftParen,
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::RightParen,
             Token::EOF
         ];
         assert_eq!(result, expected);
