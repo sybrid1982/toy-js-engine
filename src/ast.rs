@@ -1,3 +1,5 @@
+use std::num::ParseFloatError;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     NumberLiteral(f64),
@@ -35,4 +37,28 @@ pub enum PrefixOperator {
     Negative,
     Positive,
     Not
+}
+
+enum ExpressionResult {
+    Number(f64),
+    String(String),
+    Boolean(bool)
+}
+
+impl ExpressionResult {
+    fn coerce_to_bool(&self) -> bool {
+        match self {
+            ExpressionResult::Boolean(val) => *val,
+            ExpressionResult::Number(val) => *val != 0.0,
+            ExpressionResult::String(val) => val.len() > 0
+        }
+    }
+
+    fn coerce_to_number(&self) -> Result<f64, ParseFloatError> {
+        match self {
+            ExpressionResult::Boolean(val) => if *val {Ok(1.0)} else {Ok(0.0)},
+            ExpressionResult::Number(val) => Ok(*val),
+            ExpressionResult::String(val) => val.parse::<f64>()
+        }
+    }
 }
