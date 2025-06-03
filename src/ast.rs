@@ -3,9 +3,10 @@ pub enum Expression {
     NumberLiteral(f64),
     Boolean(bool),
     Identifier(String),
-    Prefix(Operator, Box<Expression>),
+    Prefix(PrefixOperator, Box<Expression>),
     Operation(Box<Expression>, Operator, Box<Expression>)
 }
+
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
@@ -24,5 +25,13 @@ pub enum Operator {
     GreaterThan,
     And,
     Or,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PrefixOperator {
+    Increment,
+    Decrement,
+    Negative,
+    Positive,
     Not
 }

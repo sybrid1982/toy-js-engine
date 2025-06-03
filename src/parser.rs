@@ -1,4 +1,4 @@
-use crate::{ast::{Expression, Operator, Statement}, lexer::Token};
+use crate::{ast::{Expression, Operator, PrefixOperator, Statement}, lexer::Token};
 
 /// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
 /// This precedence is generally held, except in certain cases (short circuiting).  For instance, a || (b + c) will not evaluate the b + c side if a is true.
@@ -204,15 +204,33 @@ impl Parser {
     /// priority level 14
     fn parse_unary(&mut self) -> Expression {
         match self.peek() {
-            Token::Minus => {
-                self.advance();
+            Token::Minus | Token::Plus => {
+                let token = self.advance();
+                if self.peek() == &token {
+                    self.advance();
+                    let right = self.parse_unary();
+                    match token {
+                        Token::Minus => {
+                            return Expression::Prefix(PrefixOperator::Decrement, Box::new(right))
+                        },
+                        Token::Plus => {
+                            return Expression::Prefix(PrefixOperator::Increment, Box::new(right))
+                        },
+                        _ => unreachable!()
+                    }
+                }
                 let right = self.parse_unary();
-                Expression::Prefix(Operator::Subtract, Box::new(right))
+                let prefix = match token {
+                    Token::Minus => PrefixOperator::Negative,
+                    Token::Plus => PrefixOperator::Positive,
+                    _ => unreachable!()
+                };
+                Expression::Prefix(prefix, Box::new(right))
             },
             Token::ExclamationMark => {
                 self.advance();
                 let right = self.parse_unary();
-                Expression::Prefix(Operator::Not, Box::new(right))
+                Expression::Prefix(PrefixOperator::Not, Box::new(right))
             }
             _ => self.parse_sub_expression(),
         }
@@ -395,7 +413,7 @@ mod tests {
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
             Expression::Prefix(
-                Operator::Subtract,
+                PrefixOperator::Negative,
                 Box::new(
                     Expression::Operation(
                         Box::new(Expression::NumberLiteral(5.0)),
@@ -536,7 +554,7 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
-            Expression::Prefix(Operator::Not, Box::new(Expression::NumberLiteral(0.0))),
+            Expression::Prefix(PrefixOperator::Not, Box::new(Expression::NumberLiteral(0.0))),
         );
         assert_eq!(result[0], expected);
     }
@@ -547,10 +565,10 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
-            Expression::Prefix(Operator::Not, 
+            Expression::Prefix(PrefixOperator::Not, 
                 Box::new(
                     Expression::Prefix(
-                        Operator::Not, Box::new(Expression::NumberLiteral(0.0))
+                        PrefixOperator::Not, Box::new(Expression::NumberLiteral(0.0))
                     )
                 )
             ),
@@ -558,4 +576,25 @@ mod tests {
         assert_eq!(result[0], expected);
     }
 
+    #[test]
+    fn it_should_handle_double_plus_as_prefix() {
+        let tokens = vec![Token::Plus, Token::Plus, Token::Number(0.0)];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::NumberLiteral(0.0)))
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_double_minus_as_prefix() {
+        let tokens = vec![Token::Minus, Token::Minus, Token::Number(4.0)];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Prefix(PrefixOperator::Decrement, Box::new(Expression::NumberLiteral(4.0)))
+        );
+        assert_eq!(result[0], expected);
+    }
 }

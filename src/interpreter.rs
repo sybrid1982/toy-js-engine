@@ -1,39 +1,57 @@
-use crate::ast::{Statement, Expression, Operator};
+use crate::ast::{Expression, Operator, PrefixOperator, Statement};
 use crate::environment::Environment;
 
 pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) {
     for statement in statements {
-        match statement {
-            Statement::Let(name, expression) => {
-                let val = eval_expression(expression, env);
-                env.set(name, val);
-            }
-            Statement::ExpressionStatement(expression) => {
-                println!("{}", eval_expression(expression, env))
-            }
+        eval_statement(statement, env);
+    }
+}
+
+fn eval_statement(statement: Statement, env: &mut Environment) {
+    match statement {
+        Statement::Let(name, expression) => {
+            let val = eval_expression(expression, env);
+            env.set(name, val);
+        }
+        Statement::ExpressionStatement(expression) => {
+            println!("{}", eval_expression(expression, env))
         }
     }
 }
 
-fn eval_expression(expression: Expression, env: &Environment) -> f64 {
+fn eval_expression(expression: Expression, env: &mut Environment) -> f64 {
     match expression {
         Expression::NumberLiteral(n) => n,
         Expression::Identifier(name) => env.get(&name).unwrap_or(-255.0),
         Expression::Boolean(is_true) => if is_true { 1.0 } else { 0.0 },
         Expression::Prefix(operator, expression) => {
-            let val = eval_expression(*expression, env);
+            let val = eval_expression(*expression.clone(), env);
             match operator {
-                Operator::Subtract => {
+                PrefixOperator::Negative => {
                     return -1.0 * val;
                 },
-                Operator::Not => {
+                PrefixOperator::Positive => {
+                    return val;
+                },
+                PrefixOperator::Not => {
                     if val == 0.0 {
                         return 1.0 
                     } else { 
                         return 0.0
                     }
                 },
-                _ => return val
+                PrefixOperator::Decrement | PrefixOperator::Increment => {
+                    match *expression {
+                        Expression::Identifier(ident) => {
+                            modify_variable_and_return_new_value(env, operator, ident)
+                        },
+                        _ => {
+                            // TODO: Modify code so eval_expression returns result, and this is an error return value
+                            println!("Uncaught SyntaxError: Invalid left-hand side expression in prefix operation");
+                            return 0.0
+                        }
+                    }
+                }
             }
         },
         Expression::Operation(left_hand, operator, right_hand) => {
@@ -57,6 +75,21 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
     }
 }
 
+fn modify_variable_and_return_new_value(env: &mut Environment, operator: PrefixOperator, ident: String) -> f64 {
+    let stored_value = env.get(&ident);
+    match stored_value {
+        Some(previous_value) => {
+            let new = if operator == PrefixOperator::Decrement { previous_value - 1.0 } else { previous_value + 1.0 };
+            env.set(ident.clone(), new);
+            return new
+        },
+        None => {
+            println!("Uncaught ReferenceError: {} is not defined", ident);
+            return 0.0
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,8 +101,8 @@ mod tests {
                 Operator::Multiply,
                 Box::new(Expression::NumberLiteral(3.0)),
         );
-        let env = Environment::new();
-        assert_eq!(eval_expression(expression, &env), 15.0);
+        let mut env = Environment::new();
+        assert_eq!(eval_expression(expression, &mut env), 15.0);
     }
 }
 
@@ -79,20 +112,32 @@ mod integration_tests {
     use crate::lexer::tokenize;
     use crate::parser::Parser;
 
+    fn eval_statement_at_index(statements: &Vec<Statement>, env: &mut Environment, index: usize) {
+        let statement = match &statements[index] {
+            Statement::Let(identifier, expression) => {
+                Statement::Let(identifier.to_string(), expression.clone())
+            },
+            Statement::ExpressionStatement(expression) => {
+                Statement::ExpressionStatement(expression.clone())
+            }
+        };
+        eval_statement(statement, env);
+    }
+
     #[test]
     fn line_without_semicolon() {
         let input = "3 + 5";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 8.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 8.0);
     }
 
     #[test]
@@ -101,14 +146,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 10.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 10.0);
     }
 
     #[test]
@@ -117,14 +162,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), -5.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), -5.0);
     }
 
     #[test]
@@ -133,14 +178,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -149,14 +194,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -165,14 +210,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -181,14 +226,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -197,14 +242,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -213,14 +258,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -229,14 +274,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -245,14 +290,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -261,14 +306,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -277,14 +322,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -293,14 +338,14 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let env = Environment::new();
+        let mut env = Environment::new();
         let expression = match &statements[0] {
             Statement::ExpressionStatement(expression) => {
                 expression
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -318,7 +363,7 @@ mod integration_tests {
         };
         eval_statements(statements, &mut env);
         assert_eq!(env.get("x").unwrap_or(-255.0), 3.0);
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -335,7 +380,7 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
     }
 
     #[test]
@@ -352,7 +397,7 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
     }
 
     #[test]
@@ -369,6 +414,33 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+    }
+
+    #[test]
+    fn testing_logic_with_decrement_prefix() {
+        let input = "let x = 3; --x; x == 3;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        eval_statement_at_index(&statements, &mut env, 0);
+        assert_eq!(env.get("x").unwrap(), 3.0);
+        assert_eq!(eval_expression(expression, &mut env), 2.0);
+        assert_eq!(env.get("x").unwrap(), 2.0);
+
+        let expression = match &statements[2] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        assert_eq!(eval_expression(expression, &mut env), 0.0);
     }
 }
