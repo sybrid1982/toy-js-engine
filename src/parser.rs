@@ -206,12 +206,12 @@ impl Parser {
         match self.peek() {
             Token::Minus => {
                 self.advance();
-                let right = self.parse_sub_expression();
+                let right = self.parse_unary();
                 Expression::Prefix(Operator::Subtract, Box::new(right))
             },
             Token::ExclamationMark => {
                 self.advance();
-                let right = self.parse_sub_expression();
+                let right = self.parse_unary();
                 Expression::Prefix(Operator::Not, Box::new(right))
             }
             _ => self.parse_sub_expression(),
@@ -540,4 +540,22 @@ mod tests {
         );
         assert_eq!(result[0], expected);
     }
+
+    #[test]
+    fn it_should_handle_double_exclamation_mark_as_prefix() {
+        let tokens = vec![Token::ExclamationMark, Token::ExclamationMark, Token::Number(0.0)];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Prefix(Operator::Not, 
+                Box::new(
+                    Expression::Prefix(
+                        Operator::Not, Box::new(Expression::NumberLiteral(0.0))
+                    )
+                )
+            ),
+        );
+        assert_eq!(result[0], expected);
+    }
+
 }

@@ -354,4 +354,21 @@ mod integration_tests {
         eval_statements(statements, &mut env);
         assert_eq!(eval_expression(expression.clone(), &env), 1.0);
     }
+
+    #[test]
+    fn testing_logic_with_not_not() {
+        let input = "let x = 1; !!(x > 3)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        eval_statements(statements, &mut env);
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
 }
