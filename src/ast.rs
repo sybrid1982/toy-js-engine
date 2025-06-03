@@ -61,4 +61,12 @@ impl ExpressionResult {
             ExpressionResult::String(val) => val.parse::<f64>()
         }
     }
+
+    fn coerce_to_string(&self) -> String {
+        match self {
+            ExpressionResult::Boolean(val) => if *val { "true".to_string() } else { "false".to_string() },
+            ExpressionResult::Number(val) => val.to_string(),
+            ExpressionResult::String(val) => val.to_string()
+        }
+    }
 }
