@@ -26,6 +26,13 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
                 Operator::Subtract => {
                     return -1.0 * val;
                 },
+                Operator::Not => {
+                    if val == 0.0 {
+                        return 1.0 
+                    } else { 
+                        return 0.0
+                    }
+                },
                 _ => return val
             }
         },
@@ -43,7 +50,8 @@ fn eval_expression(expression: Expression, env: &Environment) -> f64 {
                 Operator::Equal => if left == right { 1.0 } else { 0.0 },
                 // In Javascript, 0 is falsy and all other numbers are truthy
                 Operator::And => if left != 0.0 && right != 0.0 { 1.0 } else { 0.0 },
-                Operator::Or => if left != 0.0 || right != 0.0 { 1.0 } else { 0.0 }
+                Operator::Or => if left != 0.0 || right != 0.0 { 1.0 } else { 0.0 },
+                _ => return left
             }
         }
     }
@@ -310,6 +318,40 @@ mod integration_tests {
         };
         eval_statements(statements, &mut env);
         assert_eq!(env.get("x").unwrap_or(-255.0), 3.0);
+        assert_eq!(eval_expression(expression.clone(), &env), 1.0);
+    }
+
+    #[test]
+    fn testing_logic_with_not_expect_false() {
+        let input = "let x = 5; !(x > 3)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        eval_statements(statements, &mut env);
+        assert_eq!(eval_expression(expression.clone(), &env), 0.0);
+    }
+
+    #[test]
+    fn testing_logic_with_not_expect_true() {
+        let input = "let x = 1; !(x > 3)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        eval_statements(statements, &mut env);
         assert_eq!(eval_expression(expression.clone(), &env), 1.0);
     }
 }

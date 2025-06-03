@@ -17,6 +17,7 @@ pub enum Token {
     Ampersand,
     Pipe,
     Boolean(bool),
+    ExclamationMark,
     Unknown(String)
 }
 
@@ -102,6 +103,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     evaluate_current_string(&mut tokens, &mut current_string);
                 }
                 tokens.push(Token::Pipe);
+            },
+            '!' => {
+                if string_has_non_whitespace(&current_string) {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                }
+                tokens.push(Token::ExclamationMark);
             },
             _ => {
                 current_string.push(character);
@@ -368,4 +375,20 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[test]
+    fn it_parses_exclamation_mark() {
+        let result = tokenize(
+            "!(1 > 2)"
+        );
+        let expected = [
+            Token::ExclamationMark,
+            Token::LeftParen,
+            Token::Number(1.0),
+            Token::RightChevron,
+            Token::Number(2.0),
+            Token::RightParen,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
 }

@@ -2,11 +2,10 @@ This will be a very simple javascript toy engine written in rust for my own educ
 
 Current features:
 Basic math operators: +, -, *, /, and math_with_parentheses
-Basic logic operators: &&, ||
+Basic logic operators: &&, ||, !
 Basic comparators: >, <, ==
 
 To do:
-Add not operator
 Add <= and >=
 Add conditionals
 Add functions

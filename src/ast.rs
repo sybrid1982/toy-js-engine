@@ -23,5 +23,6 @@ pub enum Operator {
     LessThan,
     GreaterThan,
     And,
-    Or
+    Or,
+    Not
 }
