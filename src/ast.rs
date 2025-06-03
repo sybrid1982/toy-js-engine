@@ -4,9 +4,10 @@ pub enum Expression {
     Boolean(bool),
     Identifier(String),
     Prefix(PrefixOperator, Box<Expression>),
-    Operation(Box<Expression>, Operator, Box<Expression>)
+    Operation(Box<Expression>, Operator, Box<Expression>),
+    // Although this allows the left side to be any expression, the interpreter will only accept Identifier(String) that have been defined
+    Assignment(Box<Expression>, Box<Expression>)
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {

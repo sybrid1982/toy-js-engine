@@ -1,6 +1,7 @@
 use crate::ast::{Expression, Operator, PrefixOperator, Statement};
 use crate::environment::Environment;
 
+
 pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) {
     for statement in statements {
         eval_statement(statement, env);
@@ -10,82 +11,127 @@ pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) {
 fn eval_statement(statement: Statement, env: &mut Environment) {
     match statement {
         Statement::Let(name, expression) => {
-            let val = eval_expression(expression, env);
-            env.set(name, val);
+            let result = eval_expression(expression, env);
+            match result {
+                Ok(val) => {
+                    env.set(name, val);
+                }
+                error => println!("{:#?}", error)
+            }
         }
         Statement::ExpressionStatement(expression) => {
-            println!("{}", eval_expression(expression, env))
+            println!("{:#?}", eval_expression(expression, env))
         }
     }
 }
 
-fn eval_expression(expression: Expression, env: &mut Environment) -> f64 {
+fn eval_expression(expression: Expression, env: &mut Environment) -> Result<f64, String> {
     match expression {
-        Expression::NumberLiteral(n) => n,
-        Expression::Identifier(name) => env.get(&name).unwrap_or(-255.0),
-        Expression::Boolean(is_true) => if is_true { 1.0 } else { 0.0 },
+        Expression::NumberLiteral(n) => Ok(n),
+        Expression::Identifier(name) => match env.get(&name) {
+            Some(value) => Ok(value),
+            None => Err(reference_error(&name))
+        }
+        Expression::Boolean(is_true) => if is_true { Ok(1.0) } else { Ok(0.0) },
         Expression::Prefix(operator, expression) => {
-            let val = eval_expression(*expression.clone(), env);
-            match operator {
-                PrefixOperator::Negative => {
-                    return -1.0 * val;
-                },
-                PrefixOperator::Positive => {
-                    return val;
-                },
-                PrefixOperator::Not => {
-                    if val == 0.0 {
-                        return 1.0 
-                    } else { 
-                        return 0.0
+            handle_prefix_expression(env, operator, expression)
+        },
+        Expression::Operation(left_hand, operator, right_hand) => {
+            handle_operation_expression(env, left_hand, operator, right_hand)
+        },
+        Expression::Assignment(left_hand, right_hand) => {
+            match *left_hand {
+                Expression::Identifier(identifier) => {
+                    if env.has(identifier.clone()) {
+                        let result = eval_expression(*right_hand, env);
+                        if let Ok(value) = result {
+                            env.set(identifier, value);
+                        }
+                        result
+                    } else {
+                        Err(reference_error(&identifier))
                     }
                 },
-                PrefixOperator::Decrement | PrefixOperator::Increment => {
-                    match *expression {
-                        Expression::Identifier(ident) => {
-                            modify_variable_and_return_new_value(env, operator, ident)
-                        },
-                        _ => {
-                            // TODO: Modify code so eval_expression returns result, and this is an error return value
-                            println!("Uncaught SyntaxError: Invalid left-hand side expression in prefix operation");
-                            return 0.0
-                        }
+                _ => Err("Uncaught SyntaxError: Left side of assignment must be identifier".to_string())
+            }
+        }
+    }
+}
+
+fn handle_operation_expression(env: &mut Environment, left_hand: Box<Expression>, operator: Operator, right_hand: Box<Expression>) -> Result<f64, String> {
+    let left_result = eval_expression(*left_hand, env);
+    let right_result = eval_expression(*right_hand, env);
+    if let Ok(left) = left_result {
+        if let Ok(right) = right_result {
+            match operator {
+                Operator::Add => Ok(left + right),
+                Operator::Subtract => Ok(left - right),
+                Operator::Multiply => Ok(left * right),
+                Operator::Divide => Ok(left / right),
+                // Currently treating logic operators like math that only returns 0 or 1
+                Operator::LessThan => if left < right { Ok(1.0) } else { Ok(0.0) },
+                Operator::GreaterThan => if left > right { Ok(1.0) } else { Ok(0.0) },
+                Operator::Equal => if left == right { Ok(1.0) } else { Ok(0.0) },
+                // In Javascript, 0 is falsy and all other numbers are truthy
+                Operator::And => if left != 0.0 && right != 0.0 { Ok(1.0) } else { Ok(0.0) },
+                Operator::Or => if left != 0.0 || right != 0.0 { Ok(1.0) } else { Ok(0.0) },
+            }
+        } else {
+            return Err("Uncaught SyntaxError".to_string());
+        }
+    } else {
+        return Err("Uncaught SyntaxError".to_string());
+    }
+}
+
+fn reference_error(identifier: &str) -> String {
+    format!("Uncaught ReferenceError: {} is not defined", identifier).to_string()
+}
+
+fn handle_prefix_expression(env: &mut Environment, operator: PrefixOperator, expression: Box<Expression>) -> Result<f64, String> {
+    let result = eval_expression(*expression.clone(), env);
+    if let Ok(value) = result {
+        match operator {
+            PrefixOperator::Negative => {
+                return Ok(-1.0 * value);
+            },
+            PrefixOperator::Positive => {
+                return Ok(value);
+            },
+            PrefixOperator::Not => {
+                if value == 0.0 {
+                    return Ok(1.0) 
+                } else { 
+                    return Ok(0.0)
+                }
+            },
+            PrefixOperator::Decrement | PrefixOperator::Increment => {
+                match *expression {
+                    Expression::Identifier(ident) => {
+                        modify_variable_and_return_new_value(env, operator, ident)
+                    },
+                    _ => {
+                        // TODO: Modify code so eval_expression returns result, and this is an error return value
+                        return Err("Uncaught SyntaxError: Invalid left-hand side expression in prefix operation".to_string());
                     }
                 }
             }
-        },
-        Expression::Operation(left_hand, operator, right_hand) => {
-            let left = eval_expression(*left_hand, env);
-            let right = eval_expression(*right_hand, env);
-            match operator {
-                Operator::Add => left + right,
-                Operator::Subtract => left - right,
-                Operator::Multiply => left * right,
-                Operator::Divide => left / right,
-                // Currently treating logic operators like math that only returns 0 or 1
-                Operator::LessThan => if left < right { 1.0 } else { 0.0 },
-                Operator::GreaterThan => if left > right { 1.0 } else { 0.0 },
-                Operator::Equal => if left == right { 1.0 } else { 0.0 },
-                // In Javascript, 0 is falsy and all other numbers are truthy
-                Operator::And => if left != 0.0 && right != 0.0 { 1.0 } else { 0.0 },
-                Operator::Or => if left != 0.0 || right != 0.0 { 1.0 } else { 0.0 },
-                _ => return left
-            }
         }
+    } else {
+        return Err("Uncaught SyntaxError".to_string());
     }
 }
 
-fn modify_variable_and_return_new_value(env: &mut Environment, operator: PrefixOperator, ident: String) -> f64 {
+fn modify_variable_and_return_new_value(env: &mut Environment, operator: PrefixOperator, ident: String) -> Result<f64, String> {
     let stored_value = env.get(&ident);
     match stored_value {
         Some(previous_value) => {
             let new = if operator == PrefixOperator::Decrement { previous_value - 1.0 } else { previous_value + 1.0 };
             env.set(ident.clone(), new);
-            return new
+            return Ok(new)
         },
         None => {
-            println!("Uncaught ReferenceError: {} is not defined", ident);
-            return 0.0
+            return Err(reference_error(&ident));
         }
     }
 }
@@ -102,7 +148,8 @@ mod tests {
                 Box::new(Expression::NumberLiteral(3.0)),
         );
         let mut env = Environment::new();
-        assert_eq!(eval_expression(expression, &mut env), 15.0);
+        let result = eval_expression(expression, &mut env).unwrap();
+        assert_eq!(result, 15.0);
     }
 }
 
@@ -137,7 +184,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 8.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 8.0);
     }
 
     #[test]
@@ -153,7 +201,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 10.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 10.0);
     }
 
     #[test]
@@ -169,7 +218,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), -5.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, -5.0);
     }
 
     #[test]
@@ -185,7 +235,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -201,7 +252,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -217,7 +269,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+                let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -233,7 +286,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+                let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -249,7 +303,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+                let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -265,7 +320,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+                let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -281,7 +337,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+                let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -297,7 +354,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -313,7 +371,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -329,7 +388,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -345,7 +405,8 @@ mod integration_tests {
             },
             _ => &Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -363,7 +424,8 @@ mod integration_tests {
         };
         eval_statements(statements, &mut env);
         assert_eq!(env.get("x").unwrap_or(-255.0), 3.0);
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -380,7 +442,8 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -397,7 +460,8 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &mut env), 1.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 1.0);
     }
 
     #[test]
@@ -414,7 +478,8 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0)
         };
         eval_statements(statements, &mut env);
-        assert_eq!(eval_expression(expression.clone(), &mut env), 0.0);
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, 0.0);
     }
 
     #[test]
@@ -432,7 +497,8 @@ mod integration_tests {
         };
         eval_statement_at_index(&statements, &mut env, 0);
         assert_eq!(env.get("x").unwrap(), 3.0);
-        assert_eq!(eval_expression(expression, &mut env), 2.0);
+        let result = eval_expression(expression, &mut env).unwrap();
+        assert_eq!(result, 2.0);
         assert_eq!(env.get("x").unwrap(), 2.0);
 
         let expression = match &statements[2] {
@@ -441,6 +507,38 @@ mod integration_tests {
             },
             _ => Expression::NumberLiteral(-255.0)
         };
-        assert_eq!(eval_expression(expression, &mut env), 0.0);
+        let result = eval_expression(expression, &mut env).unwrap();
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn testing_reassignment() {
+        let input = "let x = 3; x = 4;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+
+        eval_statements(statements, &mut env);
+
+        let stored_value = env.get("x").unwrap();
+        assert_eq!(stored_value, 4.0);
+    }
+
+    #[test]
+    fn testing_reference_error() {
+        let input = "x = 6;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => {
+                expression.clone()
+            },
+            _ => Expression::NumberLiteral(-255.0)
+        };
+        let result = eval_expression(expression, &mut env);
+        assert!(result.is_err(), "{}", reference_error("x"));
     }
 }

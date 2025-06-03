@@ -19,6 +19,10 @@ impl Environment {
         }
         self.variables.insert(name, value);
     }
+
+    pub fn has(&mut self, name: String) -> bool {
+        self.variables.contains_key(&name)
+    }
 }
 
 #[cfg(test)]

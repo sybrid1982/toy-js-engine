@@ -112,7 +112,18 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
-        self.parse_logical_or()
+        self.parse_assignment()
+    }
+
+    // priority level 2
+    fn parse_assignment(&mut self) -> Expression {
+        let mut expr = self.parse_logical_or();
+        if self.peek() == &Token::Equals && self.peek_at(self.position + 1) != &Token::Equals {
+            self.advance();
+            let right = self.parse_logical_or();
+            expr = Expression::Assignment(Box::new(expr), Box::new(right));
+        }
+        expr
     }
 
     // priority level 3
@@ -142,7 +153,7 @@ impl Parser {
     // Priority level 8
     fn parse_equality(&mut self) -> Expression {
         let mut expr = self.parse_comparator();
-        while self.peek() == &Token::Equals {
+        if self.peek() == &Token::Equals {
             match self.peek_at(self.position + 1) {
                 Token::Equals => {
                     self.advance();
@@ -594,6 +605,17 @@ mod tests {
         let result = parser.parse();
         let expected = Statement::ExpressionStatement(
             Expression::Prefix(PrefixOperator::Decrement, Box::new(Expression::NumberLiteral(4.0)))
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_assignment() {
+        let tokens = vec![Token::Ident("x".to_string()), Token::Equals, Token::Number(4.0)];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::ExpressionStatement(
+            Expression::Assignment(Box::new(Expression::Identifier("x".to_string())), Box::new(Expression::NumberLiteral(4.0)))
         );
         assert_eq!(result[0], expected);
     }
