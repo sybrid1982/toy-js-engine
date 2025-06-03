@@ -130,21 +130,10 @@ fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String)
         tokens.push(Token::Boolean(bool_value));
     } else if is_string_a_number(current_string) {
         tokens.push(Token::Number(convert_string_to_f64(current_string)));
-    } else if last_token_was_let(tokens) || ident_token_exists(tokens, current_string){
-        tokens.push(Token::Ident(current_string.clone()));
     } else {
-        println!("current_string {} not evaluated to token!", current_string);
-        tokens.push(Token::Unknown(current_string.clone()));
+        tokens.push(Token::Ident(current_string.clone()));
     }
     current_string.clear();
-}
-
-fn ident_token_exists(tokens: &mut Vec<Token>, current_string: &String) -> bool {
-    tokens.contains(&Token::Ident(current_string.to_string()))
-}
-
-fn last_token_was_let(tokens: &mut Vec<Token>) -> bool {
-    tokens.len() > 0 && *tokens.last().unwrap() == Token::Let
 }
 
 fn is_string_a_number(current_string: &String) -> bool {
@@ -223,17 +212,6 @@ mod tests {
     fn it_finds_previously_used_ident() {
         let result = tokenize(TEST_STRING_WITH_REASSIGNMENT);
         assert_eq!(result[7], Token::Ident("x".to_string()));
-    }
-
-    static TEST_STRING_WITH_UNKNOWN_IDENT: &str = "
-    let x = 3 + 4;
-    sum = 9;
-    ";
-
-    #[test]
-    fn it_captures_unidentified_tokens() {
-        let result = tokenize(TEST_STRING_WITH_UNKNOWN_IDENT);
-        assert_eq!(result[7], Token::Unknown("sum".to_string()));
     }
 
     #[test]

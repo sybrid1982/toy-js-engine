@@ -1,7 +1,6 @@
 use crate::ast::{Expression, Operator, PrefixOperator, Statement};
 use crate::environment::Environment;
 
-
 pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) {
     for statement in statements {
         eval_statement(statement, env);
@@ -20,7 +19,12 @@ fn eval_statement(statement: Statement, env: &mut Environment) {
             }
         }
         Statement::ExpressionStatement(expression) => {
-            println!("{:#?}", eval_expression(expression, env))
+            let result = eval_expression(expression, env);
+            if let Ok(value) = result {
+                println!("{}", value)
+            } else if let Err(error) = result {
+                println!("{:#?}", error)
+            }
         }
     }
 }
