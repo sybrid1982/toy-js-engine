@@ -1,6 +1,7 @@
 use crate::{ast::{Expression, Operator, PrefixOperator, Statement}, lexer::Token};
 
 /// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
+/// This is per specification, not actually how the engine works.  Many of the operators listed here are unimplemented, and short circuiting is not implemented
 /// This precedence is generally held, except in certain cases (short circuiting).  For instance, a || (b + c) will not evaluate the b + c side if a is true.
 /// 18: grouping
 /// 17: access and call
