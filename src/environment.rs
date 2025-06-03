@@ -14,9 +14,6 @@ impl Environment {
     }
 
     pub fn set(&mut self, name: String, value: f64) {
-        if self.variables.contains_key(&name) {
-            println!("Modifying variable with ident: {}", &name)
-        }
         self.variables.insert(name, value);
     }
 
@@ -43,5 +40,18 @@ mod tests {
         assert_eq!(env.get("x"), Option::Some(5.0));
         env.set("x".to_string(), 2.0);
         assert_eq!(env.get("x"), Option::Some(2.0));
+    }
+
+    #[test]
+    fn it_should_return_true_on_has_if_variable_defined() {
+        let mut env = Environment::new();
+        env.set("x".to_string(), 5.0);
+        assert_eq!(env.has("x".to_string()), true);
+    }
+
+    #[test]
+    fn it_should_return_false_on_has_if_variable_undefined() {
+        let mut env = Environment::new();
+        assert_eq!(env.has("x".to_string()), false);
     }
 }
