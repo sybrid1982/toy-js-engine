@@ -1,7 +1,7 @@
 use crate::{ast::{Expression, Operator, PrefixOperator, Statement}, lexer::Token};
 
 /// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
-/// This is per specification, not actually how the engine works.  Many of the operators listed here are unimplemented, and short circuiting is not implemented
+/// This is per specification, not actually how the engine works.  Many of the operators listed here are unimplemented.
 /// This precedence is generally held, except in certain cases (short circuiting).  For instance, a || (b + c) will not evaluate the b + c side if a is true.
 /// 18: grouping
 /// 17: access and call
@@ -284,6 +284,16 @@ impl Parser {
             Token::Number(n) => Expression::NumberLiteral(n),
             Token::Ident(name) => Expression::Identifier(name.clone()),
             Token::Boolean(is_true) => Expression::Boolean(is_true),
+            Token::DoubleQuote => {
+                let result = match self.advance() {
+                    Token::String(string) => Expression::String(string),
+                    _ => Expression::NumberLiteral(0.0) // not sure how we'd get here right now, just returning 0
+                };
+                if self.peek() == &Token::DoubleQuote {
+                    self.advance();
+                }
+                return result;
+            }
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }
