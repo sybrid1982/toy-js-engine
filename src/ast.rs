@@ -12,7 +12,7 @@ pub enum Expression {
     Assignment(Box<Expression>, Box<Expression>)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
     Let(String, Expression),
     ExpressionStatement(Expression)

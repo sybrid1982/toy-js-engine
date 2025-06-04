@@ -6,7 +6,7 @@ Basic logic operators: &&, ||, !
 Basic comparators: >, <, ==
 Increment and decrement prefixes (--x, ++x)
 Working with booleans, strings, and numbers
-Adding strings and booleans and numbers for the javascript degenerates
+Adding strings and booleans and number coersion
 
 
 ## To do:

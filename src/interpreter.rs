@@ -790,4 +790,45 @@ mod integration_tests {
             ExpressionResult::Number(-5.0)
         );
     }
+
+    #[test]
+    fn prefix_increment_on_variable_true_returns_number_two() {
+        let input = "let x = true; ++x";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let second_expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        eval_statement(statements[0].clone(), &mut env);
+        assert_eq!(
+            env.get("x").unwrap(), ExpressionResult::Boolean(true)
+        );
+        let result = eval_expression(second_expression, &mut env);
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(2.0)
+        );
+        assert_eq!(
+            env.get("x").unwrap(), ExpressionResult::Number(2.0)
+        );
+    }
+
+    #[test]
+    fn prefix_plus_on_true_returns_number_one() {
+        let input = "+true";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression, &mut env);
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(1.0)
+        );
+    }
 }
