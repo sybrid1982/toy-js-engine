@@ -18,100 +18,122 @@ pub enum Token {
     Pipe,
     Boolean(bool),
     ExclamationMark,
-    Unknown(String)
+    DoubleQuote,
+    String(String),
+    Unknown(String),
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut current_string: String = String::new();
+    let mut is_reading_string: bool = false;
     input.chars().for_each(|character| {
-        match character {
-            ' ' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+        if is_reading_string {
+            match character {
+                '"' => {
+                    tokens.push(Token::String(current_string.clone()));
+                    tokens.push(Token::DoubleQuote);
+                    current_string.clear();
+                    is_reading_string = false;
                 }
-                current_string.clear();
-            },
-            '=' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                _ => current_string.push(character),
+            }
+        } else {
+            match character {
+                ' ' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    current_string.clear();
                 }
-                tokens.push(Token::Equals);
-            },
-            '+' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '=' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Equals);
                 }
-                tokens.push(Token::Plus);
-            },
-            '-' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '+' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Plus);
                 }
-                tokens.push(Token::Minus);
-            },
-            '*' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '-' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Minus);
                 }
-                tokens.push(Token::Star);
-            },
-            '/' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '*' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Star);
                 }
-                tokens.push(Token::Slash);
-            },
-            ';' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '/' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Slash);
                 }
-                tokens.push(Token::Semicolon);
-            },
-            '(' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                ';' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Semicolon);
                 }
-                tokens.push(Token::LeftParen);
-            },
-            ')' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '(' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::LeftParen);
                 }
-                tokens.push(Token::RightParen);
-            },
-            '<' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                ')' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::RightParen);
                 }
-                tokens.push(Token::LeftChevron);
-            },
-            '>' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '<' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::LeftChevron);
                 }
-                tokens.push(Token::RightChevron);
-            },
-            '&' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '>' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::RightChevron);
                 }
-                tokens.push(Token::Ampersand);
-            },
-            '|' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '&' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Ampersand);
                 }
-                tokens.push(Token::Pipe);
-            },
-            '!' => {
-                if string_has_non_whitespace(&current_string) {
-                    evaluate_current_string(&mut tokens, &mut current_string);
+                '|' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::Pipe);
                 }
-                tokens.push(Token::ExclamationMark);
-            },
-            _ => {
-                current_string.push(character);
+                '!' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::ExclamationMark);
+                }
+                '"' => {
+                    if string_has_non_whitespace(&current_string) {
+                        evaluate_current_string(&mut tokens, &mut current_string);
+                    }
+                    tokens.push(Token::DoubleQuote);
+                    is_reading_string = true;
+                }
+                _ => {
+                    current_string.push(character);
+                }
             }
         }
     });
@@ -125,8 +147,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String) {
     if *current_string == "let" {
         tokens.push(Token::Let)
-    } else if *current_string == "true" || *current_string == "false" {
-        let bool_value = *current_string == "true";
+    } else if current_string.trim() == "true" || current_string.trim() == "false" {
+        let bool_value = current_string.trim() == "true";
         tokens.push(Token::Boolean(bool_value));
     } else if is_string_a_number(current_string) {
         tokens.push(Token::Number(convert_string_to_f64(current_string)));
@@ -239,7 +261,7 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
@@ -253,7 +275,7 @@ mod tests {
             Token::Plus,
             Token::Number(2.0),
             Token::RightParen,
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
@@ -265,99 +287,79 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_ending_in_return() {
-        let result = tokenize(
-            "1+2\n"
-        );
+        let result = tokenize("1+2\n");
         let expected = [
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_chevrons() {
-        let result = tokenize(
-            "1 <> 2"
-        );
+        let result = tokenize("1 <> 2");
         let expected = [
             Token::Number(1.0),
             Token::LeftChevron,
             Token::RightChevron,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_true() {
-        let result = tokenize(
-            "true"
-        );
-        let expected = [
-            Token::Boolean(true),
-            Token::EOF
-        ];
+        let result = tokenize("true");
+        let expected = [Token::Boolean(true), Token::EOF];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_false() {
-        let result = tokenize(
-            "false"
-        );
-        let expected = [
-            Token::Boolean(false),
-            Token::EOF
-        ];
+        let result = tokenize("false");
+        let expected = [Token::Boolean(false), Token::EOF];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_ampersand() {
-        let result = tokenize(
-            "1 && 2"
-        );
+        let result = tokenize("1 && 2");
         let expected = [
             Token::Number(1.0),
             Token::Ampersand,
             Token::Ampersand,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_pipe() {
-        let result = tokenize(
-            "1 || 2"
-        );
+        let result = tokenize("1 || 2");
         let expected = [
             Token::Number(1.0),
             Token::Pipe,
             Token::Pipe,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }
 
     #[test]
     fn it_parses_exclamation_mark() {
-        let result = tokenize(
-            "!(1 > 2)"
-        );
+        let result = tokenize("!(1 > 2)");
         let expected = [
             Token::ExclamationMark,
             Token::LeftParen,
@@ -365,7 +367,52 @@ mod tests {
             Token::RightChevron,
             Token::Number(2.0),
             Token::RightParen,
-            Token::EOF
+            Token::EOF,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_true_without_semicolon() {
+        let result: Vec<Token> = tokenize("true");
+        let expected = [Token::Boolean(true), Token::EOF];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_true_without_semicolon_assignment() {
+        let result: Vec<Token> = tokenize("let x = true");
+        let expected = [
+            Token::Let,
+            Token::Ident("x".to_string()),
+            Token::Equals,
+            Token::Boolean(true),
+            Token::EOF,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_true_without_semicolon_assignment_with_newline() {
+        let result: Vec<Token> = tokenize("let x = true\n");
+        let expected = [
+            Token::Let,
+            Token::Ident("x".to_string()),
+            Token::Equals,
+            Token::Boolean(true),
+            Token::EOF,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_string() {
+        let result: Vec<Token> = tokenize("\"This is a String\"");
+        let expected = [
+            Token::DoubleQuote,
+            Token::String("This is a String".to_string()),
+            Token::DoubleQuote,
+            Token::EOF,
         ];
         assert_eq!(result, expected);
     }

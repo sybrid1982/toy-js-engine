@@ -5,6 +5,9 @@ Basic math operators: +, -, *, /, ( )
 Basic logic operators: &&, ||, !
 Basic comparators: >, <, ==
 Increment and decrement prefixes (--x, ++x)
+Working with booleans, strings, and numbers
+Adding strings and booleans and numbers for the javascript degenerates
+
 
 ## To do:
 Add <= and >=

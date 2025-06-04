@@ -5,6 +5,7 @@ pub enum Expression {
     NumberLiteral(f64),
     Boolean(bool),
     Identifier(String),
+    String(String),
     Prefix(PrefixOperator, Box<Expression>),
     Operation(Box<Expression>, Operator, Box<Expression>),
     // Although this allows the left side to be any expression, the interpreter will only accept Identifier(String) that have been defined
