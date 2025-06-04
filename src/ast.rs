@@ -1,4 +1,4 @@
-use std::num::ParseFloatError;
+use std::{fmt::Display, num::ParseFloatError};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
@@ -39,14 +39,21 @@ pub enum PrefixOperator {
     Not
 }
 
-enum ExpressionResult {
+#[derive(Clone, Debug, PartialEq)]
+pub enum ExpressionResult {
     Number(f64),
     String(String),
     Boolean(bool)
 }
 
+impl Display for ExpressionResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.coerce_to_string())
+    }
+}
+
 impl ExpressionResult {
-    fn coerce_to_bool(&self) -> bool {
+    pub fn coerce_to_bool(&self) -> bool {
         match self {
             ExpressionResult::Boolean(val) => *val,
             ExpressionResult::Number(val) => *val != 0.0,
@@ -54,7 +61,7 @@ impl ExpressionResult {
         }
     }
 
-    fn coerce_to_number(&self) -> Result<f64, ParseFloatError> {
+    pub fn coerce_to_number(&self) -> Result<f64, ParseFloatError> {
         match self {
             ExpressionResult::Boolean(val) => if *val {Ok(1.0)} else {Ok(0.0)},
             ExpressionResult::Number(val) => Ok(*val),
@@ -62,7 +69,7 @@ impl ExpressionResult {
         }
     }
 
-    fn coerce_to_string(&self) -> String {
+    pub fn coerce_to_string(&self) -> String {
         match self {
             ExpressionResult::Boolean(val) => if *val { "true".to_string() } else { "false".to_string() },
             ExpressionResult::Number(val) => val.to_string(),
