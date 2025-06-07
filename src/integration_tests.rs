@@ -574,4 +574,70 @@ mod integration_tests {
         );
     }
 
+    #[test]
+    fn function_and_call_with_argument_and_variable_reassignment() {
+        let input = "
+            function add_three(a) { return a + 3; }
+            let x = add_three(4);
+            x = add_three(x);
+            x;
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+
+        let second_function_call = match &statements[2] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+
+        eval_statements(statements.clone(), &mut env);
+        let x = env.get_variable("x".into());
+
+        assert_eq!(
+            statements.len(), 4
+        );
+        assert!(
+            env.has_function("add_three".into())
+        );
+        assert_eq!(
+            env.get_variable("x".into()).unwrap(), ExpressionResult::Number(10.0)
+        );
+        let result = eval_expression(second_function_call, &mut env);
+
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(13.0)
+        );
+    }
+
+
+
+    #[test]
+    fn function_and_call_with_multiple_arguments() {
+        let input = "
+            function add(a, b) { return a + b; }
+            add(8, 4);
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        eval_statements(statements.clone(), &mut env);
+        let result = eval_expression(expression, &mut env);
+
+        assert_eq!(
+            statements.len(), 2
+        );
+        assert!(
+            env.has_function("add".into())
+        );
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(12.0)
+        );
+    }
 }
