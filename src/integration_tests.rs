@@ -243,7 +243,7 @@ mod integration_tests {
         };
         eval_statements(statements, &mut env);
         assert_eq!(
-            env.get("x").unwrap_or(ExpressionResult::Number(-255.0)),
+            env.get_variable("x").unwrap_or(ExpressionResult::Number(-255.0)),
             ExpressionResult::Number(3.0)
         );
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -310,10 +310,10 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0),
         };
         eval_statement_at_index(&statements, &mut env, 0);
-        assert_eq!(env.get("x").unwrap(), ExpressionResult::Number(3.0));
+        assert_eq!(env.get_variable("x").unwrap(), ExpressionResult::Number(3.0));
         let result = eval_expression(expression, &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Number(2.0));
-        assert_eq!(env.get("x").unwrap(), ExpressionResult::Number(2.0));
+        assert_eq!(env.get_variable("x").unwrap(), ExpressionResult::Number(2.0));
 
         let expression = match &statements[2] {
             Statement::ExpressionStatement(expression) => expression.clone(),
@@ -333,7 +333,7 @@ mod integration_tests {
 
         eval_statements(statements, &mut env);
 
-        let stored_value = env.get("x").unwrap();
+        let stored_value = env.get_variable("x").unwrap();
         assert_eq!(stored_value, ExpressionResult::Number(4.0));
     }
 
@@ -380,9 +380,9 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0),
         };
         eval_statements(statements, &mut env);
-        let stored_value = env.get("x").unwrap();
+        let stored_value = env.get_variable("x").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("apple".to_string()));
-        let stored_value = env.get("y").unwrap();
+        let stored_value = env.get_variable("y").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("sauce".to_string()));
 
         let result = eval_expression(expression, &mut env);
@@ -409,11 +409,11 @@ mod integration_tests {
         };
 
         eval_statements(statements, &mut env);
-        let stored_value = env.get("x").unwrap();
+        let stored_value = env.get_variable("x").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("apple".to_string()));
-        let stored_value = env.get("y").unwrap();
+        let stored_value = env.get_variable("y").unwrap();
         assert_eq!(stored_value, ExpressionResult::Number(5.0));
-        let stored_value = env.get("z").unwrap();
+        let stored_value = env.get_variable("z").unwrap();
         assert_eq!(stored_value, ExpressionResult::Boolean(false));
 
         let result = eval_expression(expression, &mut env);
@@ -455,9 +455,9 @@ mod integration_tests {
         };
 
         eval_statements(statements, &mut env);
-        let stored_value = env.get("x").unwrap();
+        let stored_value = env.get_variable("x").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("apple".to_string()));
-        let stored_value = env.get("y").unwrap();
+        let stored_value = env.get_variable("y").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("5".to_string()));
 
         let result = eval_expression(expression, &mut env);
@@ -489,14 +489,14 @@ mod integration_tests {
         };
         eval_statement(statements[0].clone(), &mut env);
         assert_eq!(
-            env.get("x").unwrap(), ExpressionResult::Boolean(true)
+            env.get_variable("x").unwrap(), ExpressionResult::Boolean(true)
         );
         let result = eval_expression(second_expression, &mut env);
         assert_eq!(
             result.unwrap(), ExpressionResult::Number(2.0)
         );
         assert_eq!(
-            env.get("x").unwrap(), ExpressionResult::Number(2.0)
+            env.get_variable("x").unwrap(), ExpressionResult::Number(2.0)
         );
     }
 

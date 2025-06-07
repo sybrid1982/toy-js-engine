@@ -14,7 +14,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) {
             let result = eval_expression(expression, env);
             match result {
                 Ok(val) => {
-                    env.set(identifier, val);
+                    env.set_variable(identifier, val);
                 }
                 Err(error) => println!("{:#?}", error),
             }
@@ -39,7 +39,7 @@ pub fn eval_expression(
 ) -> Result<ExpressionResult, String> {
     match expression {
         Expression::NumberLiteral(n) => Ok(ExpressionResult::Number(n)),
-        Expression::Identifier(identifier) => match env.get(&identifier) {
+        Expression::Identifier(identifier) => match env.get_variable(&identifier) {
                         Some(value) => Ok(value),
                         None => Err(InterpreterError { kind: InterpreterErrorKind::ReferenceError(identifier.clone())}.to_string()),
             },
@@ -59,10 +59,10 @@ pub fn eval_expression(
             }
         Expression::Assignment(left_hand, right_hand) => match *left_hand {
                 Expression::Identifier(identifier) => {
-                    if env.has(identifier.clone()) {
+                    if env.has_variable(identifier.clone()) {
                         let result = eval_expression(*right_hand, env);
                         if let Ok(value) = &result {
-                            env.set(identifier, value.clone());
+                            env.set_variable(identifier, value.clone());
                         }
                         result
                     } else {
@@ -271,7 +271,7 @@ fn modify_variable_and_return_new_value(
     operator: PrefixOperator,
     identifier: String,
 ) -> Result<ExpressionResult, String> {
-    let stored_value = env.get(&identifier);
+    let stored_value = env.get_variable(&identifier);
     match stored_value {
         Some(previous_value) => {
             if let Ok(previous_value_as_number) = previous_value.coerce_to_number() {
@@ -280,7 +280,7 @@ fn modify_variable_and_return_new_value(
                 } else {
                     ExpressionResult::Number(previous_value_as_number + 1.0)
                 };
-                env.set(identifier.clone(), new.clone());
+                env.set_variable(identifier.clone(), new.clone());
                 return Ok(new);
             }
             return Err(InterpreterError { kind: InterpreterErrorKind::NaN }.to_string());

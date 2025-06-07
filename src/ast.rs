@@ -97,3 +97,19 @@ impl Block {
         }
     }
 }
+
+// A Function consists of its arguments, and block.  Maybe also its return is held separately?
+#[derive(Clone, Debug, PartialEq)]
+pub struct Function {
+    arguments: Vec<Expression>,
+    block: Block
+}
+
+impl Function {
+    pub fn new(arguments: Vec<Expression>, block: Block) -> Self {
+        Function {
+            arguments,
+            block
+        }
+    }
+}
