@@ -25,6 +25,7 @@ pub enum Token {
     Return,
     String(String),
     NewLine,
+    Comma,
     Unknown(String),
 }
 
@@ -113,11 +114,15 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::DoubleQuote);
                     is_reading_string = true;
-                },
+                }
                 '\n' => {
                     evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::NewLine);
                     is_reading_string = false;
+                }
+                ',' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::Comma);
                 }
                 _ => {
                     current_string.push(character);
@@ -180,7 +185,7 @@ mod tests {
     #[test]
     fn it_parses_ident() {
         let result = tokenize(BASIC_TEST_STRING);
-        assert_eq!(result[1], Token::Ident("x".to_string()));
+        assert_eq!(result[1], Token::Ident("x".into()));
     }
 
     #[test]
@@ -227,7 +232,7 @@ mod tests {
     #[test]
     fn it_finds_previously_used_ident() {
         let result = tokenize(TEST_STRING_WITH_REASSIGNMENT);
-        assert_eq!(result[9], Token::Ident("x".to_string()));
+        assert_eq!(result[9], Token::Ident("x".into()));
     }
 
     #[test]
@@ -379,7 +384,7 @@ mod tests {
         let result: Vec<Token> = tokenize("let x = true");
         let expected = [
             Token::Let,
-            Token::Ident("x".to_string()),
+            Token::Ident("x".into()),
             Token::Equals,
             Token::Boolean(true),
             Token::EOF,
@@ -392,7 +397,7 @@ mod tests {
         let result: Vec<Token> = tokenize("let x = true\n");
         let expected = [
             Token::Let,
-            Token::Ident("x".to_string()),
+            Token::Ident("x".into()),
             Token::Equals,
             Token::Boolean(true),
             Token::NewLine,
@@ -406,7 +411,7 @@ mod tests {
         let result: Vec<Token> = tokenize("\"This is a String\"");
         let expected = [
             Token::DoubleQuote,
-            Token::String("This is a String".to_string()),
+            Token::String("This is a String".into()),
             Token::DoubleQuote,
             Token::EOF,
         ];
@@ -418,7 +423,7 @@ mod tests {
         let result: Vec<Token> = tokenize("function returnPi() { return 3.1415 }");
         let expected = [
             Token::Function,
-            Token::Ident("returnPi".to_string()),
+            Token::Ident("returnPi".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::LeftCurlyBrace,
@@ -429,4 +434,39 @@ mod tests {
         ];
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn it_parses_commas() {
+        let result: Vec<Token> = tokenize("(a, 5, \"sandwich\", true, false)");
+        let expected = [
+            Token::LeftParen,
+            Token::Ident("a".into()),
+            Token::Comma,
+            Token::Number(5.0),
+            Token::Comma,
+            Token::DoubleQuote,
+            Token::String("sandwich".into()),
+            Token::DoubleQuote,
+            Token::Comma,
+            Token::Boolean(true),
+            Token::Comma,
+            Token::Boolean(false),
+            Token::RightParen,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_does_not_parse_commas_in_strings() {
+        let result: Vec<Token> = tokenize("\"hello, guv\"");
+        let expected = [
+            Token::DoubleQuote,
+            Token::String("hello, guv".into()),
+            Token::DoubleQuote,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
 }
