@@ -26,7 +26,7 @@ use crate::{
 /// 1: comma
 
 pub struct Parser {
-    tokens: Vec<Token>,
+    pub tokens: Vec<Token>,
     position: usize,
 }
 
@@ -132,7 +132,7 @@ impl Parser {
                         // for now print an error
                         println!("Unexpected token");
                     }
-                    arguments.push(self.parse_expression())
+                    arguments.push(argument)
                 }
                 if let Some(block) = self.parse_block() {
                     return Some(Statement::FunctionDeclaration(name, arguments, block));
@@ -803,5 +803,88 @@ mod tests {
             vec![],
         ));
         assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_parse_out_a_function_call_with_argument() {
+        let tokens = vec![
+            Token::Ident("fake_function".to_string()),
+            Token::LeftParen,
+            Token::Number(3.0),
+            Token::RightParen,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        let expected = Statement::ExpressionStatement(Expression::Call(
+            Box::new(Expression::Identifier("fake_function".to_string())),
+            vec![Expression::NumberLiteral(3.0)],
+        ));
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_parse_out_a_return_with_expression() {
+        let tokens = vec![
+            Token::Return,
+            Token::Ident("a".into()),
+            Token::Plus,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        let expected = Statement::ReturnStatement(
+            Some(Expression::Operation(
+                Box::new(Expression::Identifier('a'.into())),
+                Operator::Add,
+                Box::new(Expression::NumberLiteral(3.0))
+            ))
+        );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn debug_test() {
+        let tokens = vec![
+                Token::NewLine,
+                Token::Function,
+                Token::Ident(
+                    "add_three".into(),
+                ),
+                Token::LeftParen,
+                Token::Ident(
+                    "a".into(),
+                ),
+                Token::RightParen,
+                Token::LeftCurlyBrace,
+                Token::Return,
+                Token::Ident(
+                    "a".into(),
+                ),
+                Token::Plus,
+                Token::Number(
+                    3.0,
+                ),
+                Token::Semicolon,
+                Token::RightCurlyBrace,
+                Token::NewLine,
+                Token::Ident(
+                    "add_three".into(),
+                ),
+                Token::LeftParen,
+                Token::Number(
+                    4.0,
+                ),
+                Token::RightParen,
+                Token::Semicolon,
+                Token::NewLine,
+                Token::EOF,
+        ];
+        let mut parser = Parser::new(tokens);
+
+        let result = parser.parse();
+        assert_eq!(result.len(), 2);
     }
 }

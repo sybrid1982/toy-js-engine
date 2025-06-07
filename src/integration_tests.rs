@@ -545,4 +545,33 @@ mod integration_tests {
             result.unwrap(), ExpressionResult::Number(3.0)
         );
     }
+
+    #[test]
+    fn function_and_call_with_argument() {
+        let input = "
+            function add_three(a) { return a + 3; }
+            add_three(4);
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        eval_statements(statements.clone(), &mut env);
+        let result = eval_expression(expression, &mut env);
+
+        assert_eq!(
+            statements.len(), 2
+        );
+        assert!(
+            env.has_function("add_three".into())
+        );
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(7.0)
+        );
+    }
+
 }
