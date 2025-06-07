@@ -18,6 +18,7 @@ pub enum Statement {
     Let(String, Expression),
     FunctionDeclaration(String, Vec<Expression>, Block),
     ExpressionStatement(Expression),
+    ReturnStatement(Expression)
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -46,7 +47,8 @@ pub enum PrefixOperator {
 pub enum ExpressionResult {
     Number(f64),
     String(String),
-    Boolean(bool)
+    Boolean(bool),
+    Undefined
 }
 
 impl Display for ExpressionResult {
@@ -60,7 +62,8 @@ impl ExpressionResult {
         match self {
             ExpressionResult::Boolean(val) => *val,
             ExpressionResult::Number(val) => *val != 0.0,
-            ExpressionResult::String(val) => val.len() > 0
+            ExpressionResult::String(val) => val.len() > 0,
+            ExpressionResult::Undefined => false
         }
     }
 
@@ -68,7 +71,8 @@ impl ExpressionResult {
         match self {
             ExpressionResult::Boolean(val) => if *val {Ok(1.0)} else {Ok(0.0)},
             ExpressionResult::Number(val) => Ok(*val),
-            ExpressionResult::String(val) => val.parse::<f64>()
+            ExpressionResult::String(val) => val.parse::<f64>(),
+            ExpressionResult::Undefined => "undefined".parse::<f64>()
         }
     }
 
@@ -76,7 +80,8 @@ impl ExpressionResult {
         match self {
             ExpressionResult::Boolean(val) => if *val { "true".to_string() } else { "false".to_string() },
             ExpressionResult::Number(val) => val.to_string(),
-            ExpressionResult::String(val) => val.to_string()
+            ExpressionResult::String(val) => val.to_string(),
+            ExpressionResult::Undefined => "undefined".to_string()
         }
     }
 }
@@ -96,20 +101,8 @@ impl Block {
             statements,
         }
     }
-}
 
-// A Function consists of its arguments, and block.  Maybe also its return is held separately?
-#[derive(Clone, Debug, PartialEq)]
-pub struct Function {
-    arguments: Vec<Expression>,
-    block: Block
-}
-
-impl Function {
-    pub fn new(arguments: Vec<Expression>, block: Block) -> Self {
-        Function {
-            arguments,
-            block
-        }
+    pub fn get_statements(&self) -> Vec<Statement> {
+        return self.statements.clone()
     }
 }

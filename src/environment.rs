@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use crate::ast::{Function, ExpressionResult};
+use crate::ast::ExpressionResult;
+use crate::function::Function;
 
-
+#[derive(Clone)]
 pub struct Environment {
-    pub variables: HashMap<String, ExpressionResult>,
+    pub variables: HashMap<String, (bool, ExpressionResult)>,
     pub functions: HashMap<String, Function>       
 }
 
@@ -13,15 +14,33 @@ impl Environment {
     }
 
     pub fn get_variable(&self, identifier: &str) -> Option<ExpressionResult> {
-        self.variables.get(identifier).cloned()
+        return match self.variables.get(identifier) {
+            Some((_, value)) => Some(value.clone()),
+            None => None
+        };
+    }
+
+    pub fn define_variable(&mut self, identifier: String, value: ExpressionResult) {
+        self.variables.insert(identifier, (false, value));
     }
 
     pub fn set_variable(&mut self, identifier: String, value: ExpressionResult) {
-        self.variables.insert(identifier, value);
+        let inherited = match self.variables.get(&identifier) {
+            Some((inherited, _)) => inherited.clone(),
+            None => false
+        };
+        self.variables.insert(identifier, (inherited, value));
     }
 
     pub fn has_variable(&mut self, identifier: String) -> bool {
         self.variables.contains_key(&identifier)
+    }
+
+    pub fn is_variable_greater_scope(&self, identifier: String) -> bool {
+        return match self.variables.get(&identifier) {
+            Some((inherited, _)) => inherited.clone(),
+            None => false
+        };
     }
 
     pub fn get_function(&self, identifier: &str) -> Option<Function> {

@@ -1,14 +1,19 @@
 use crate::ast::{Expression, ExpressionResult, Operator, PrefixOperator, Statement};
 use crate::environment::Environment;
 use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind, SyntaxErrorKind};
+use crate::function::Function;
 
-pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) {
+pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) -> ExpressionResult {
     for statement in statements {
-        eval_statement(statement, env);
+        let result = eval_statement(statement, env);
+        if let Some(value) = &result {
+            return value.clone();
+        }
     }
+    ExpressionResult::Undefined
 }
 
-pub fn eval_statement(statement: Statement, env: &mut Environment) {
+pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<ExpressionResult> {
     match statement {
         Statement::Let(identifier, expression) => {
             let result = eval_expression(expression, env);
@@ -16,8 +21,11 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) {
                 Ok(val) => {
                     env.set_variable(identifier, val);
                 }
-                Err(error) => println!("{:#?}", error),
+                Err(error) => {
+                    println!("{:#?}", error);
+                }
             }
+            return None;
         }
         Statement::ExpressionStatement(expression) => {
             let result = eval_expression(expression, env);
@@ -26,9 +34,19 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) {
             } else if let Err(error) = result {
                 println!("{:#?}", error)
             }
+            return None;
         }
         Statement::FunctionDeclaration(identifier, arguments, block) => {
-
+            let function = Function::new(arguments, block);
+            env.set_function(identifier, function);
+            return None;
+        }
+        Statement::ReturnStatement(expression) => {
+            let result = eval_expression(expression, env);
+            if let Ok(value) = result {
+                return Some(value);
+            }
+            None
         }
     }
 }
@@ -73,7 +91,19 @@ pub fn eval_expression(
                     Err(InterpreterError { kind: InterpreterErrorKind::SyntaxError(Some(SyntaxErrorKind::LeftSideAssignmentMustBeIdentifier))}.to_string())
                 }
             },
-        Expression::Call(expression, expressions) => todo!(),
+        Expression::Call(callee, arguments) => {
+            match *callee {
+                Expression::Identifier(identifier) => {
+                    if let Some(function) = env.get_function(&identifier) {
+                        return function.call(arguments, env);
+                    }
+                    return Err(format!("Function {} not defined", identifier));
+                },
+                _ => {
+                    return Err("Either not implemented or not valid".into());
+                }
+            }
+        }
     }
 }
 

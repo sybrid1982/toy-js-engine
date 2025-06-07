@@ -9,6 +9,7 @@ mod parser;
 mod environment;
 mod interpreter;
 mod integration_tests;
+mod function;
 
 fn main() {
     let mut env = Environment::new();

@@ -121,6 +121,12 @@ impl Parser {
                 // building arguments
                 let mut arguments = vec![];
                 while !self.expect(&Token::RightParen) {
+                    let argument = self.parse_expression();
+                    if !matches!(argument, Expression::Identifier(_)) {
+                        // TODO: this is an error, an argument is just an identifier for later
+                        // for now print an error
+                        println!("Unexpected token");
+                    }
                     arguments.push(self.parse_expression())
                 }
                 if let Some(block) = self.parse_block() {
