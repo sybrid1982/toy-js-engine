@@ -1,4 +1,7 @@
-use crate::{ast::{Expression, Operator, PrefixOperator, Statement}, lexer::Token};
+use crate::{
+    ast::{Block, Expression, Operator, PrefixOperator, Statement},
+    lexer::Token,
+};
 
 /// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
 /// This is per specification, not actually how the engine works.  Many of the operators listed here are unimplemented.
@@ -24,12 +27,15 @@ use crate::{ast::{Expression, Operator, PrefixOperator, Statement}, lexer::Token
 
 pub struct Parser {
     tokens: Vec<Token>,
-    position: usize
+    position: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, position: 0 }
+        Parser {
+            tokens,
+            position: 0,
+        }
     }
 
     fn peek(&self) -> &Token {
@@ -68,9 +74,9 @@ impl Parser {
     fn expect(&mut self, expected: &Token) -> bool {
         if self.peek() == expected {
             self.advance();
-            return true
+            return true;
         }
-        return false
+        return false;
     }
 
     pub fn parse(&mut self) -> Vec<Statement> {
@@ -87,7 +93,8 @@ impl Parser {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.peek() {
             Token::Let => self.parse_let(),
-            _ => self.parse_expression_statement()
+            Token::Function => self.parse_function(),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -106,10 +113,42 @@ impl Parser {
         }
     }
 
+    fn parse_function(&mut self) -> Option<Statement> {
+        self.advance();
+
+        if let Token::Ident(name) = self.advance() {
+            if self.expect(&Token::LeftParen) {
+                // building arguments
+                let mut arguments = vec![];
+                while !self.expect(&Token::RightParen) {
+                    arguments.push(self.parse_expression())
+                }
+                if let Some(block) = self.parse_block() {
+                    return Some(Statement::FunctionDeclaration(name, arguments, block));
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_block(&mut self) -> Option<Block> {
+        if self.expect(&Token::LeftCurlyBrace) {
+            // building the block
+            let mut function_statements = vec![];
+            while !self.expect(&Token::RightCurlyBrace) {
+                if let Some(statement) = self.parse_statement() {
+                    function_statements.push(statement)
+                }
+            }
+            return Some(Block::new(function_statements));
+        }
+        None
+    }
+
     fn parse_expression_statement(&mut self) -> Option<Statement> {
         let expression = self.parse_expression();
         self.expect(&Token::Semicolon);
-        Some(Statement::ExpressionStatement(expression))    
+        Some(Statement::ExpressionStatement(expression))
     }
 
     fn parse_expression(&mut self) -> Expression {
@@ -142,7 +181,9 @@ impl Parser {
     // priority level 4
     fn parse_logical_and(&mut self) -> Expression {
         let mut expr = self.parse_equality();
-        while self.peek() == &Token::Ampersand && self.peek_at(self.position + 1) == &Token::Ampersand {
+        while self.peek() == &Token::Ampersand
+            && self.peek_at(self.position + 1) == &Token::Ampersand
+        {
             self.advance();
             self.advance(); // consume both ampersands
             let right = self.parse_equality();
@@ -161,7 +202,7 @@ impl Parser {
                     self.advance(); // consume both ampersands
                     let right = self.parse_comparator();
                     expr = Expression::Operation(Box::new(expr), Operator::Equal, Box::new(right));
-                },
+                }
                 _ => {}
             }
         }
@@ -224,21 +265,21 @@ impl Parser {
                     match token {
                         Token::Minus => {
                             return Expression::Prefix(PrefixOperator::Decrement, Box::new(right))
-                        },
+                        }
                         Token::Plus => {
                             return Expression::Prefix(PrefixOperator::Increment, Box::new(right))
-                        },
-                        _ => unreachable!()
+                        }
+                        _ => unreachable!(),
                     }
                 }
                 let right = self.parse_unary();
                 let prefix = match token {
                     Token::Minus => PrefixOperator::Negative,
                     Token::Plus => PrefixOperator::Positive,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
                 Expression::Prefix(prefix, Box::new(right))
-            },
+            }
             Token::ExclamationMark => {
                 self.advance();
                 let right = self.parse_unary();
@@ -261,33 +302,46 @@ impl Parser {
                     match self.peek_at(parser_position) {
                         Token::LeftParen => {
                             sub_level += 1;
-                        },
+                        }
                         Token::RightParen => {
                             sub_level -= 1;
-                        },
+                        }
                         Token::EOF => {
                             sub_level = 0;
-                        },
-                        _ => { }
+                        }
+                        _ => {}
                     }
                 }
-                let mut sublevel_parser= self.extract_subset(left_paren_position, parser_position);
+                let mut sublevel_parser = self.extract_subset(left_paren_position, parser_position);
                 sublevel_parser.remove_wrapping_parens();
                 return sublevel_parser.parse_expression();
-            },
-            _ => self.parse_primary()
+            }
+            _ => self.parse_primary(),
         }
     }
 
     fn parse_primary(&mut self) -> Expression {
         match self.advance() {
             Token::Number(n) => Expression::NumberLiteral(n),
-            Token::Ident(name) => Expression::Identifier(name.clone()),
+            Token::Ident(name) => {
+                return match self.peek() {
+                    Token::LeftParen => {
+                        self.advance();     // get rid of the left paren
+                        let mut arguments = vec![];
+                        while !self.expect(&Token::RightParen) {
+                            let argument = self.parse_expression();
+                            arguments.push(argument);
+                        }
+                        return Expression::Call(Box::new(Expression::Identifier(name.clone())), arguments)
+                    },
+                    _ => Expression::Identifier(name.clone())
+                }
+            },
             Token::Boolean(is_true) => Expression::Boolean(is_true),
             Token::DoubleQuote => {
                 let result = match self.advance() {
                     Token::String(string) => Expression::String(string),
-                    _ => Expression::NumberLiteral(0.0) // not sure how we'd get here right now, just returning 0
+                    _ => Expression::NumberLiteral(0.0), // not sure how we'd get here right now, just returning 0
                 };
                 if self.peek() == &Token::DoubleQuote {
                     self.advance();
@@ -308,142 +362,197 @@ mod tests {
         let tokens = vec![Token::Number(24.0), Token::Semicolon];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        assert_eq!(result[0], Statement::ExpressionStatement(Expression::NumberLiteral(24.0)));
+        assert_eq!(
+            result[0],
+            Statement::ExpressionStatement(Expression::NumberLiteral(24.0))
+        );
     }
 
     #[test]
     fn it_should_interpret_number_plus_number_as_operation() {
-        let tokens = vec![Token::Number(5.0), Token::Plus, Token::Number(3.0), Token::Semicolon];
+        let tokens = vec![
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(5.0)),
-                Operator::Add,
-                Box::new(Expression::NumberLiteral(3.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(5.0)),
+            Operator::Add,
+            Box::new(Expression::NumberLiteral(3.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_interpret_number_times_number_as_operation() {
-        let tokens = vec![Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
+        let tokens = vec![
+            Token::Number(5.0),
+            Token::Star,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(5.0)),
-                Operator::Multiply,
-                Box::new(Expression::NumberLiteral(3.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(5.0)),
+            Operator::Multiply,
+            Box::new(Expression::NumberLiteral(3.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_obey_order_of_operations() {
-        let tokens = vec![Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::Star, Token::Number(3.0), Token::Semicolon];
+        let tokens = vec![
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::Star,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(5.0)),
+            Operator::Add,
+            Box::new(Expression::Operation(
+                Box::new(Expression::NumberLiteral(2.0)),
+                Operator::Multiply,
+                Box::new(Expression::NumberLiteral(3.0)),
+            )),
+        ));
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_handle_let_assignment() {
+        let tokens = vec![
+            Token::Let,
+            Token::Ident(String::from("my_var")),
+            Token::Equals,
+            Token::Number(5.0),
+            Token::Star,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected = Statement::Let(
+            String::from("my_var"),
             Expression::Operation(
                 Box::new(Expression::NumberLiteral(5.0)),
-                Operator::Add,
-                Box::new(
-                    Expression::Operation(
-                        Box::new(Expression::NumberLiteral(2.0)),
-                        Operator::Multiply,
-                        Box::new(Expression::NumberLiteral(3.0))
-                    )
-                ),
+                Operator::Multiply,
+                Box::new(Expression::NumberLiteral(3.0)),
             ),
         );
         assert_eq!(result[0], expected);
     }
 
     #[test]
-    fn it_should_handle_let_assignment() {
-        let tokens = vec![Token::Let, Token::Ident(String::from("my_var")), Token::Equals, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon];
-        let mut parser = Parser::new(tokens);
-        let result = parser.parse();
-        let expected = Statement::Let(String::from("my_var"), Expression::Operation(
-                Box::new(Expression::NumberLiteral(5.0)),
-                Operator::Multiply,
-                Box::new(Expression::NumberLiteral(3.0)),
-            ));
-        assert_eq!(result[0], expected);
-    }
-    
-    #[test]
     fn it_should_handle_let_assignment_to_second_variable() {
         let tokens = vec![
-            Token::Let, Token::Ident(String::from("my_var")), Token::Equals, Token::Number(5.0), Token::Star, Token::Number(3.0), Token::Semicolon,   // let my_var = 5 & 3;
-            Token::Let, Token::Ident(String::from("my_other_var")), Token::Equals, Token::Ident(String::from("my_var")),  Token::Semicolon,             // let my_other_var = my_var
+            Token::Let,
+            Token::Ident(String::from("my_var")),
+            Token::Equals,
+            Token::Number(5.0),
+            Token::Star,
+            Token::Number(3.0),
+            Token::Semicolon, // let my_var = 5 & 3;
+            Token::Let,
+            Token::Ident(String::from("my_other_var")),
+            Token::Equals,
+            Token::Ident(String::from("my_var")),
+            Token::Semicolon, // let my_other_var = my_var
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::Let(String::from("my_var"), Expression::Operation(
+        let expected = Statement::Let(
+            String::from("my_var"),
+            Expression::Operation(
                 Box::new(Expression::NumberLiteral(5.0)),
                 Operator::Multiply,
                 Box::new(Expression::NumberLiteral(3.0)),
-            ));
-        let next_expected = Statement::Let(String::from("my_other_var"), Expression::Identifier(String::from("my_var")));
+            ),
+        );
+        let next_expected = Statement::Let(
+            String::from("my_other_var"),
+            Expression::Identifier(String::from("my_var")),
+        );
         assert_eq!(result[0], expected);
         assert_eq!(result[1], next_expected);
     }
 
     #[test]
     fn it_should_handle_simple_math_wrapped_in_parentheses() {
-        let tokens = vec![Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(3.0), Token::RightParen, Token::Semicolon];
+        let tokens = vec![
+            Token::LeftParen,
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(3.0),
+            Token::RightParen,
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(5.0)),
-                Operator::Add,
-                Box::new(Expression::NumberLiteral(3.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(5.0)),
+            Operator::Add,
+            Box::new(Expression::NumberLiteral(3.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_obey_order_of_operations_with_parens() {
-        let tokens = vec![Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::RightParen, Token::Star, Token::Number(3.0), Token::Semicolon];
+        let tokens = vec![
+            Token::LeftParen,
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::RightParen,
+            Token::Star,
+            Token::Number(3.0),
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(
-                    Expression::Operation(
-                        Box::new(Expression::NumberLiteral(5.0)),
-                        Operator::Add,
-                        Box::new(Expression::NumberLiteral(2.0)),
-                    ),
-                ),
-                Operator::Multiply,
-                Box::new(Expression::NumberLiteral(3.0))
-            ));
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::Operation(
+                Box::new(Expression::NumberLiteral(5.0)),
+                Operator::Add,
+                Box::new(Expression::NumberLiteral(2.0)),
+            )),
+            Operator::Multiply,
+            Box::new(Expression::NumberLiteral(3.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_negate_with_parens() {
-        let tokens = vec![Token::Minus, Token::LeftParen, Token::Number(5.0), Token::Plus, Token::Number(2.0), Token::RightParen, Token::Semicolon];
+        let tokens = vec![
+            Token::Minus,
+            Token::LeftParen,
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::RightParen,
+            Token::Semicolon,
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Prefix(
-                PrefixOperator::Negative,
-                Box::new(
-                    Expression::Operation(
-                        Box::new(Expression::NumberLiteral(5.0)),
-                        Operator::Add,
-                        Box::new(Expression::NumberLiteral(2.0)),
-                    ),
-                ),
-            ));
+        let expected = Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Negative,
+            Box::new(Expression::Operation(
+                Box::new(Expression::NumberLiteral(5.0)),
+                Operator::Add,
+                Box::new(Expression::NumberLiteral(2.0)),
+            )),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -453,17 +562,15 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::Add,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::Add,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -473,17 +580,15 @@ mod tests {
             Token::Number(1.0),
             Token::LeftChevron,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::LessThan,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::LessThan,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -493,17 +598,15 @@ mod tests {
             Token::Number(1.0),
             Token::RightChevron,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::GreaterThan,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::GreaterThan,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -514,17 +617,15 @@ mod tests {
             Token::Equals,
             Token::Equals,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::Equal,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::Equal,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -535,17 +636,15 @@ mod tests {
             Token::Ampersand,
             Token::Ampersand,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::And,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::And,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -556,17 +655,15 @@ mod tests {
             Token::Pipe,
             Token::Pipe,
             Token::Number(2.0),
-            Token::EOF
+            Token::EOF,
         ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Operation(
-                Box::new(Expression::NumberLiteral(1.0)),
-                Operator::Or,
-                Box::new(Expression::NumberLiteral(2.0)),
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Operation(
+            Box::new(Expression::NumberLiteral(1.0)),
+            Operator::Or,
+            Box::new(Expression::NumberLiteral(2.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -575,26 +672,29 @@ mod tests {
         let tokens = vec![Token::ExclamationMark, Token::Number(0.0)];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Prefix(PrefixOperator::Not, Box::new(Expression::NumberLiteral(0.0))),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Not,
+            Box::new(Expression::NumberLiteral(0.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_handle_double_exclamation_mark_as_prefix() {
-        let tokens = vec![Token::ExclamationMark, Token::ExclamationMark, Token::Number(0.0)];
+        let tokens = vec![
+            Token::ExclamationMark,
+            Token::ExclamationMark,
+            Token::Number(0.0),
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Prefix(PrefixOperator::Not, 
-                Box::new(
-                    Expression::Prefix(
-                        PrefixOperator::Not, Box::new(Expression::NumberLiteral(0.0))
-                    )
-                )
-            ),
-        );
+        let expected = Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Not,
+            Box::new(Expression::Prefix(
+                PrefixOperator::Not,
+                Box::new(Expression::NumberLiteral(0.0)),
+            )),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -603,9 +703,10 @@ mod tests {
         let tokens = vec![Token::Plus, Token::Plus, Token::Number(0.0)];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::NumberLiteral(0.0)))
-        );
+        let expected = Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Increment,
+            Box::new(Expression::NumberLiteral(0.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
@@ -614,20 +715,72 @@ mod tests {
         let tokens = vec![Token::Minus, Token::Minus, Token::Number(4.0)];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Prefix(PrefixOperator::Decrement, Box::new(Expression::NumberLiteral(4.0)))
-        );
+        let expected = Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Decrement,
+            Box::new(Expression::NumberLiteral(4.0)),
+        ));
         assert_eq!(result[0], expected);
     }
 
     #[test]
     fn it_should_handle_assignment() {
-        let tokens = vec![Token::Ident("x".to_string()), Token::Equals, Token::Number(4.0)];
+        let tokens = vec![
+            Token::Ident("x".to_string()),
+            Token::Equals,
+            Token::Number(4.0),
+        ];
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
-        let expected = Statement::ExpressionStatement(
-            Expression::Assignment(Box::new(Expression::Identifier("x".to_string())), Box::new(Expression::NumberLiteral(4.0)))
+        let expected = Statement::ExpressionStatement(Expression::Assignment(
+            Box::new(Expression::Identifier("x".to_string())),
+            Box::new(Expression::NumberLiteral(4.0)),
+        ));
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_parse_out_a_function() {
+        let tokens = vec![
+            Token::Function,
+            Token::Ident("fake_function".to_string()),
+            Token::LeftParen,
+            Token::RightParen,
+            Token::LeftCurlyBrace,
+            Token::Number(5.0),
+            Token::Plus,
+            Token::Number(5.0),
+            Token::RightCurlyBrace,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        let expected_block_statements =
+            vec![Statement::ExpressionStatement(Expression::Operation(
+                Box::new(Expression::NumberLiteral(5.0)),
+                Operator::Add,
+                Box::new(Expression::NumberLiteral(5.0)),
+            ))];
+        let expected = Statement::FunctionDeclaration(
+            "fake_function".to_string(),
+            vec![],
+            Block::new(expected_block_statements),
         );
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn it_should_parse_out_a_function_call() {
+        let tokens = vec![
+            Token::Ident("fake_function".to_string()),
+            Token::LeftParen,
+            Token::RightParen,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        let expected = Statement::ExpressionStatement(Expression::Call(
+            Box::new(Expression::Identifier("fake_function".to_string())),
+            vec![],
+        ));
         assert_eq!(result[0], expected);
     }
 }

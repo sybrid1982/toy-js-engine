@@ -10,22 +10,21 @@ impl Environment {
         Environment { variables: HashMap::new() }
     }
 
-    pub fn get(&self, name: &str) -> Option<ExpressionResult> {
-        self.variables.get(name).cloned()
+    pub fn get(&self, identifier: &str) -> Option<ExpressionResult> {
+        self.variables.get(identifier).cloned()
     }
 
-    pub fn set(&mut self, name: String, value: ExpressionResult) {
-        self.variables.insert(name, value);
+    pub fn set(&mut self, identifier: String, value: ExpressionResult) {
+        self.variables.insert(identifier, value);
     }
 
-    pub fn has(&mut self, name: String) -> bool {
-        self.variables.contains_key(&name)
+    pub fn has(&mut self, identifier: String) -> bool {
+        self.variables.contains_key(&identifier)
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]

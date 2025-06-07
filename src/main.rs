@@ -1,13 +1,14 @@
 use environment::Environment;
-use interpreter::eval_statements;
 use lexer::tokenize;
 use parser::Parser;
+use crate::interpreter::interpreter::{eval_statements};
 
 mod lexer;
 mod ast;
 mod parser;
 mod environment;
 mod interpreter;
+mod integration_tests;
 
 fn main() {
     let mut env = Environment::new();

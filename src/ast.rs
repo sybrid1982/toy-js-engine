@@ -9,13 +9,15 @@ pub enum Expression {
     Prefix(PrefixOperator, Box<Expression>),
     Operation(Box<Expression>, Operator, Box<Expression>),
     // Although this allows the left side to be any expression, the interpreter will only accept Identifier(String) that have been defined
-    Assignment(Box<Expression>, Box<Expression>)
+    Assignment(Box<Expression>, Box<Expression>),
+    Call(Box<Expression>, Vec<Expression>)
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
     Let(String, Expression),
-    ExpressionStatement(Expression)
+    FunctionDeclaration(String, Vec<Expression>, Block),
+    ExpressionStatement(Expression),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -75,6 +77,23 @@ impl ExpressionResult {
             ExpressionResult::Boolean(val) => if *val { "true".to_string() } else { "false".to_string() },
             ExpressionResult::Number(val) => val.to_string(),
             ExpressionResult::String(val) => val.to_string()
+        }
+    }
+}
+
+// So far, we've assumed we have to run every statement in order.  However, functions are not run immediately on declaration, and they can be called repeatedly
+// and once completed a function should return back to the next statement from where it was called
+
+// A Block is a Vec of statements and a list of blocks this block contains
+#[derive(Clone, Debug, PartialEq)]
+pub struct Block {
+    statements: Vec<Statement>,
+}
+
+impl Block {
+    pub fn new(statements: Vec<Statement>) -> Self {
+        Block {
+            statements,
         }
     }
 }
