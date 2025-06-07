@@ -41,12 +41,17 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
             env.set_function(identifier, function);
             return None;
         }
-        Statement::ReturnStatement(expression) => {
-            let result = eval_expression(expression, env);
-            if let Ok(value) = result {
-                return Some(value);
+        Statement::ReturnStatement(return_expression) => {
+            if let Some(expression) = return_expression {
+                let result = eval_expression(expression, env);
+                if let Ok(value) = result {
+                    return Some(value);
+                }
             }
-            None
+            // TODO: should be bubbling the error up or something, instead of returning none
+            // so adjust eval_statement to return Result<Option<ExpressionResult>>?
+
+            Some(ExpressionResult::Undefined)
         }
     }
 }

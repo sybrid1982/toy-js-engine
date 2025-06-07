@@ -94,6 +94,11 @@ impl Parser {
         match self.peek() {
             Token::Let => self.parse_let(),
             Token::Function => self.parse_function(),
+            Token::Return => Some(self.parse_return()),
+            Token::NewLine => {
+                self.advance();
+                return None
+            },
             _ => self.parse_expression_statement(),
         }
     }
@@ -135,6 +140,15 @@ impl Parser {
             }
         }
         None
+    }
+
+    fn parse_return(&mut self) -> Statement {
+        self.advance(); // get rid of that return token
+        if !matches!(self.peek(), Token::Semicolon | Token::NewLine) {
+            let expression = self.parse_expression();
+            return Statement::ReturnStatement(Some(expression))
+        }
+        Statement::ReturnStatement(None)
     }
 
     fn parse_block(&mut self) -> Option<Block> {
@@ -349,11 +363,12 @@ impl Parser {
                     Token::String(string) => Expression::String(string),
                     _ => Expression::NumberLiteral(0.0), // not sure how we'd get here right now, just returning 0
                 };
+                // if this isn't a DoubleQuote, we have an issue, but the parser just parses currently
                 if self.peek() == &Token::DoubleQuote {
                     self.advance();
                 }
                 return result;
-            }
+            },
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }

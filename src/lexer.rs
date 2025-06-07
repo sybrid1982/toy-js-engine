@@ -24,6 +24,7 @@ pub enum Token {
     RightCurlyBrace,
     Return,
     String(String),
+    NewLine,
     Unknown(String),
 }
 
@@ -44,7 +45,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
         } else {
             match character {
-                ' ' | '\n' => {
+                ' ' => {
                     evaluate_current_string(&mut tokens, &mut current_string);
                     current_string.clear();
                 }
@@ -112,6 +113,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::DoubleQuote);
                     is_reading_string = true;
+                },
+                '\n' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::NewLine);
+                    is_reading_string = false;
                 }
                 _ => {
                     current_string.push(character);
@@ -221,7 +227,7 @@ mod tests {
     #[test]
     fn it_finds_previously_used_ident() {
         let result = tokenize(TEST_STRING_WITH_REASSIGNMENT);
-        assert_eq!(result[7], Token::Ident("x".to_string()));
+        assert_eq!(result[9], Token::Ident("x".to_string()));
     }
 
     #[test]
@@ -287,6 +293,7 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
+            Token::NewLine,
             Token::EOF,
         ];
         assert_eq!(result, expected);
@@ -388,6 +395,7 @@ mod tests {
             Token::Ident("x".to_string()),
             Token::Equals,
             Token::Boolean(true),
+            Token::NewLine,
             Token::EOF,
         ];
         assert_eq!(result, expected);

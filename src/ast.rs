@@ -18,7 +18,7 @@ pub enum Statement {
     Let(String, Expression),
     FunctionDeclaration(String, Vec<Expression>, Block),
     ExpressionStatement(Expression),
-    ReturnStatement(Expression)
+    ReturnStatement(Option<Expression>)
 }
 
 #[derive(Clone, Debug, PartialEq)]
