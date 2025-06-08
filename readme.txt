@@ -8,6 +8,7 @@ Increment and decrement prefixes (--x, ++x)
 Working with booleans, strings, and numbers
 Adding strings and booleans and number coersion
 Defining functions with the function keyword, with return statements returning values
+Calling defined functions
 
 ## To do:
 Add <= and >=
