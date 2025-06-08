@@ -19,7 +19,13 @@ pub enum Token {
     Boolean(bool),
     ExclamationMark,
     DoubleQuote,
+    Function,
+    LeftCurlyBrace,
+    RightCurlyBrace,
+    Return,
     String(String),
+    NewLine,
+    Comma,
     Unknown(String),
 }
 
@@ -41,95 +47,82 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         } else {
             match character {
                 ' ' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     current_string.clear();
                 }
                 '=' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Equals);
                 }
                 '+' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Plus);
                 }
                 '-' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Minus);
                 }
                 '*' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Star);
                 }
                 '/' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Slash);
                 }
                 ';' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Semicolon);
                 }
                 '(' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::LeftParen);
                 }
                 ')' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::RightParen);
                 }
                 '<' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::LeftChevron);
                 }
                 '>' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::RightChevron);
                 }
+                '{' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::LeftCurlyBrace);
+                }
+                '}' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::RightCurlyBrace);
+                }
                 '&' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Ampersand);
                 }
                 '|' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Pipe);
                 }
                 '!' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::ExclamationMark);
                 }
                 '"' => {
-                    if string_has_non_whitespace(&current_string) {
-                        evaluate_current_string(&mut tokens, &mut current_string);
-                    }
+                    evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::DoubleQuote);
                     is_reading_string = true;
+                }
+                '\n' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::NewLine);
+                    is_reading_string = false;
+                }
+                ',' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::Comma);
                 }
                 _ => {
                     current_string.push(character);
@@ -145,15 +138,21 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 }
 
 fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String) {
-    if *current_string == "let" {
-        tokens.push(Token::Let)
-    } else if current_string.trim() == "true" || current_string.trim() == "false" {
-        let bool_value = current_string.trim() == "true";
-        tokens.push(Token::Boolean(bool_value));
-    } else if is_string_a_number(current_string) {
-        tokens.push(Token::Number(convert_string_to_f64(current_string)));
-    } else {
-        tokens.push(Token::Ident(current_string.clone()));
+    if string_has_non_whitespace(current_string) {
+        if *current_string == "let" {
+            tokens.push(Token::Let);
+        } else if current_string.trim() == "function" {
+            tokens.push(Token::Function);
+        } else if current_string.trim() == "return" {
+            tokens.push(Token::Return);
+        } else if current_string.trim() == "true" || current_string.trim() == "false" {
+            let bool_value = current_string.trim() == "true";
+            tokens.push(Token::Boolean(bool_value));
+        } else if is_string_a_number(current_string) {
+            tokens.push(Token::Number(convert_string_to_f64(current_string)));
+        } else {
+            tokens.push(Token::Ident(current_string.clone()));
+        }
     }
     current_string.clear();
 }
@@ -186,7 +185,7 @@ mod tests {
     #[test]
     fn it_parses_ident() {
         let result = tokenize(BASIC_TEST_STRING);
-        assert_eq!(result[1], Token::Ident("x".to_string()));
+        assert_eq!(result[1], Token::Ident("x".into()));
     }
 
     #[test]
@@ -233,7 +232,7 @@ mod tests {
     #[test]
     fn it_finds_previously_used_ident() {
         let result = tokenize(TEST_STRING_WITH_REASSIGNMENT);
-        assert_eq!(result[7], Token::Ident("x".to_string()));
+        assert_eq!(result[9], Token::Ident("x".into()));
     }
 
     #[test]
@@ -299,6 +298,7 @@ mod tests {
             Token::Number(1.0),
             Token::Plus,
             Token::Number(2.0),
+            Token::NewLine,
             Token::EOF,
         ];
         assert_eq!(result, expected);
@@ -384,7 +384,7 @@ mod tests {
         let result: Vec<Token> = tokenize("let x = true");
         let expected = [
             Token::Let,
-            Token::Ident("x".to_string()),
+            Token::Ident("x".into()),
             Token::Equals,
             Token::Boolean(true),
             Token::EOF,
@@ -397,9 +397,10 @@ mod tests {
         let result: Vec<Token> = tokenize("let x = true\n");
         let expected = [
             Token::Let,
-            Token::Ident("x".to_string()),
+            Token::Ident("x".into()),
             Token::Equals,
             Token::Boolean(true),
+            Token::NewLine,
             Token::EOF,
         ];
         assert_eq!(result, expected);
@@ -410,9 +411,60 @@ mod tests {
         let result: Vec<Token> = tokenize("\"This is a String\"");
         let expected = [
             Token::DoubleQuote,
-            Token::String("This is a String".to_string()),
+            Token::String("This is a String".into()),
             Token::DoubleQuote,
             Token::EOF,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_a_function_declaration() {
+        let result: Vec<Token> = tokenize("function returnPi() { return 3.1415 }");
+        let expected = [
+            Token::Function,
+            Token::Ident("returnPi".into()),
+            Token::LeftParen,
+            Token::RightParen,
+            Token::LeftCurlyBrace,
+            Token::Return,
+            Token::Number(3.1415),
+            Token::RightCurlyBrace,
+            Token::EOF,
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_commas() {
+        let result: Vec<Token> = tokenize("(a, 5, \"sandwich\", true, false)");
+        let expected = [
+            Token::LeftParen,
+            Token::Ident("a".into()),
+            Token::Comma,
+            Token::Number(5.0),
+            Token::Comma,
+            Token::DoubleQuote,
+            Token::String("sandwich".into()),
+            Token::DoubleQuote,
+            Token::Comma,
+            Token::Boolean(true),
+            Token::Comma,
+            Token::Boolean(false),
+            Token::RightParen,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_does_not_parse_commas_in_strings() {
+        let result: Vec<Token> = tokenize("\"hello, guv\"");
+        let expected = [
+            Token::DoubleQuote,
+            Token::String("hello, guv".into()),
+            Token::DoubleQuote,
+            Token::EOF
         ];
         assert_eq!(result, expected);
     }
