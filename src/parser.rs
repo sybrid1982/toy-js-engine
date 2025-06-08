@@ -124,16 +124,7 @@ impl Parser {
         if let Token::Ident(name) = self.advance() {
             if self.expect(&Token::LeftParen) {
                 // building arguments
-                let mut arguments = vec![];
-                while !self.expect(&Token::RightParen) {
-                    let argument = self.parse_expression();
-                    if !matches!(argument, Expression::Identifier(_)) {
-                        // TODO: this is an error, an argument is just an identifier for later
-                        // for now print an error
-                        println!("Unexpected token");
-                    }
-                    arguments.push(argument)
-                }
+                let arguments = self.parse_arguments();
                 if let Some(block) = self.parse_block() {
                     return Some(Statement::FunctionDeclaration(name, arguments, block));
                 }
@@ -142,6 +133,19 @@ impl Parser {
         None
     }
 
+    fn parse_arguments(&mut self) -> Vec<Expression> {
+        let mut arguments = vec![];
+        while !self.expect(&Token::RightParen) {
+            if self.peek() == &Token::Comma { self.advance(); };
+            let argument = self.parse_expression();
+            // When defining a function's parameters, these should only be Identifiers
+            // But as we are reusing this when we call a function, this is fine
+            // The interpreter is left to decide if a mistake has been made
+            arguments.push(argument)
+        }
+        arguments
+    }
+    
     fn parse_return(&mut self) -> Statement {
         self.advance(); // get rid of that return token
         if !matches!(self.peek(), Token::Semicolon | Token::NewLine) {
@@ -166,6 +170,10 @@ impl Parser {
     }
 
     fn parse_expression_statement(&mut self) -> Option<Statement> {
+        if matches!(self.peek(), Token::Semicolon | Token::RightCurlyBrace | Token::Comma | Token::NewLine) {
+            self.advance();
+            return None;
+        }
         let expression = self.parse_expression();
         self.expect(&Token::Semicolon);
         Some(Statement::ExpressionStatement(expression))
@@ -347,11 +355,7 @@ impl Parser {
                 return match self.peek() {
                     Token::LeftParen => {
                         self.advance();     // get rid of the left paren
-                        let mut arguments = vec![];
-                        while !self.expect(&Token::RightParen) {
-                            let argument = self.parse_expression();
-                            arguments.push(argument);
-                        }
+                        let arguments = self.parse_arguments();
                         return Expression::Call(Box::new(Expression::Identifier(name.clone())), arguments)
                     },
                     _ => Expression::Identifier(name.clone())
@@ -887,4 +891,56 @@ mod tests {
         let result = parser.parse();
         assert_eq!(result.len(), 2);
     }
+
+    #[test]
+    fn it_should_handle_two_arguments() {
+        let tokens = vec![
+                Token::NewLine,
+                Token::Function,
+                Token::Ident(
+                    "add".into(),
+                ),
+                Token::LeftParen,
+                Token::Ident(
+                    "a".into(),
+                ),
+                Token::Comma,
+                Token::Ident(
+                    "b".into(),
+                ),
+                Token::RightParen,
+                Token::LeftCurlyBrace,
+                Token::Return,
+                Token::Ident(
+                    "a".into(),
+                ),
+                Token::Plus,
+                Token::Ident(
+                    "b".into(),
+                ),
+                Token::Semicolon,
+                Token::RightCurlyBrace,
+                Token::NewLine,
+                Token::Ident(
+                    "add".into(),
+                ),
+                Token::LeftParen,
+                Token::Number(
+                    4.0,
+                ),
+                Token::Comma,
+                Token::Number(
+                    3.0
+                ),
+                Token::RightParen,
+                Token::Semicolon,
+                Token::NewLine,
+                Token::EOF,
+        ];
+        let mut parser = Parser::new(tokens);
+
+        let result = parser.parse();
+        assert_eq!(result.len(), 2);
+    }
+
 }

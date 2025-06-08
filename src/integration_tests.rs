@@ -611,33 +611,31 @@ mod integration_tests {
         );
     }
 
+    #[test]
+    fn function_and_call_with_multiple_arguments() {
+        let input = "
+            function add(a, b) { return a + b; }
+            add(8, 4);
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[1] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        eval_statements(statements.clone(), &mut env);
+        let result = eval_expression(expression, &mut env);
 
-
-    // #[test]
-    // fn function_and_call_with_multiple_arguments() {
-    //     let input = "
-    //         function add(a, b) { return a + b; }
-    //         add(8, 4);
-    //     ";
-    //     let tokens = tokenize(input);
-    //     let mut parser = Parser::new(tokens);
-    //     let statements = parser.parse();
-    //     let mut env = Environment::new();
-    //     let expression = match &statements[1] {
-    //         Statement::ExpressionStatement(expression) => expression.clone(),
-    //         _ => Expression::NumberLiteral(-255.0),
-    //     };
-    //     eval_statements(statements.clone(), &mut env);
-    //     let result = eval_expression(expression, &mut env);
-
-    //     assert_eq!(
-    //         statements.len(), 2
-    //     );
-    //     assert!(
-    //         env.has_function("add".into())
-    //     );
-    //     assert_eq!(
-    //         result.unwrap(), ExpressionResult::Number(12.0)
-    //     );
-    // }
+        assert_eq!(
+            statements.len(), 2
+        );
+        assert!(
+            env.has_function("add".into())
+        );
+        assert_eq!(
+            result.unwrap(), ExpressionResult::Number(12.0)
+        );
+    }
 }
