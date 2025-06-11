@@ -26,6 +26,7 @@ pub enum Token {
     String(String),
     NewLine,
     Comma,
+    If,
     Unknown(String),
 }
 
@@ -145,6 +146,8 @@ fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String)
             tokens.push(Token::Function);
         } else if current_string.trim() == "return" {
             tokens.push(Token::Return);
+        } else if current_string.trim() == "if" {
+            tokens.push(Token::If)  
         } else if current_string.trim() == "true" || current_string.trim() == "false" {
             let bool_value = current_string.trim() == "true";
             tokens.push(Token::Boolean(bool_value));
@@ -464,6 +467,16 @@ mod tests {
             Token::DoubleQuote,
             Token::String("hello, guv".into()),
             Token::DoubleQuote,
+            Token::EOF
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn it_parses_if() {
+        let result: Vec<Token> = tokenize("if");
+        let expected = [
+            Token::If,
             Token::EOF
         ];
         assert_eq!(result, expected);

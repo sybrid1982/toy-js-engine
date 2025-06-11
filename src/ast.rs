@@ -17,6 +17,7 @@ pub enum Expression {
 pub enum Statement {
     Let(String, Expression),
     FunctionDeclaration(String, Vec<Expression>, Block),
+    ConditionalStatement(Expression, Block),
     ExpressionStatement(Expression),
     ReturnStatement(Option<Expression>)
 }

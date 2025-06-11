@@ -17,6 +17,7 @@ mod integration_tests {
                     },
             Statement::FunctionDeclaration(identifier, arguments, block) => todo!(),
             Statement::ReturnStatement(expression) => todo!(),
+            Statement::ConditionalStatement(condition, block) => todo!()
         };
         eval_statement(statement, env);
     }
