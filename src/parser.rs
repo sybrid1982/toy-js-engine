@@ -391,7 +391,6 @@ impl Parser {
                 }
                 return result;
             },
-            Token::String(string) => Expression::String(string),
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }
@@ -970,7 +969,9 @@ mod tests {
             Token::Number(2.0),
             Token::Equals,
             Token::Equals,
+            Token::DoubleQuote,
             Token::String("2".into()),
+            Token::DoubleQuote,
             Token::RightParen,
             Token::LeftCurlyBrace,
             Token::Number(6.0),
