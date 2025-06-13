@@ -17,6 +17,7 @@ mod integration_tests {
                     },
             Statement::FunctionDeclaration(identifier, arguments, block) => todo!(),
             Statement::ReturnStatement(expression) => todo!(),
+            Statement::ConditionalStatement(condition, block) => todo!()
         };
         eval_statement(statement, env);
     }
@@ -637,5 +638,72 @@ mod integration_tests {
         assert_eq!(
             result.unwrap(), ExpressionResult::Number(12.0)
         );
+    }
+
+    #[test]
+    fn if_statement_true() {
+        let input = "
+            let x = 3;
+            if (2 > 1) {
+                x = 4 + 3;
+            }
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        assert_eq!(statements.len(), 2);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(7.0))
+        );
+    }
+
+    #[test]
+    fn if_statement_false() {
+        let input = "
+            let x = 3;
+            if (1 > 2) {
+                x = 4 + 3;
+            }
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        assert_eq!(statements.len(), 2);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(3.0))
+        );
+    }
+
+    #[test]
+    fn it_does_not_propogate_block_scope_variables_upwards() {
+        let input = "
+            let x = 3;
+            if (x > 2) {
+                let y = 5;
+                ++x;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(4.0))
+        );
+        assert_eq!(
+            env.get_variable("y".into()),
+            None
+        )
     }
 }

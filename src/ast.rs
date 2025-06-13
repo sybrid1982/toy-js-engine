@@ -1,5 +1,7 @@
 use std::{fmt::Display, num::ParseFloatError};
 
+use crate::{environment::Environment, interpreter::eval_statements};
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     NumberLiteral(f64),
@@ -17,6 +19,7 @@ pub enum Expression {
 pub enum Statement {
     Let(String, Expression),
     FunctionDeclaration(String, Vec<Expression>, Block),
+    ConditionalStatement(Expression, Block),
     ExpressionStatement(Expression),
     ReturnStatement(Option<Expression>)
 }
@@ -104,5 +107,9 @@ impl Block {
 
     pub fn get_statements(&self) -> Vec<Statement> {
         return self.statements.clone()
+    }
+
+    pub fn execute_block(&self, environment: &mut Environment) -> Result<ExpressionResult, String> {
+        return Ok(eval_statements(self.statements.clone(), environment));
     }
 }

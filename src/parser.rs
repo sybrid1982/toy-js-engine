@@ -90,6 +90,10 @@ impl Parser {
         statements
     }
 
+    // Instead of returning options, we should be returning results, because a return of None
+    // from these top level functions (parse lets, parse function, parse conditional, parse return)
+    // represent an error in the syntax - instead of the expected tokens, different tokens have appeared instead
+
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.peek() {
             Token::Let => self.parse_let(),
@@ -99,6 +103,7 @@ impl Parser {
                 self.advance();
                 return None
             },
+            Token::If => self.parse_conditional(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -128,6 +133,19 @@ impl Parser {
                 if let Some(block) = self.parse_block() {
                     return Some(Statement::FunctionDeclaration(name, arguments, block));
                 }
+            }
+        }
+        None
+    }
+
+    fn parse_conditional(&mut self) -> Option<Statement> {
+        self.advance();
+
+        if self.expect(&Token::LeftParen) {
+            let expression = self.parse_expression();
+            if self.expect(&Token::RightParen) {
+                let block = self.parse_block();
+                return Some(Statement::ConditionalStatement(expression, block?))
             }
         }
         None
@@ -850,7 +868,7 @@ mod tests {
     }
 
     #[test]
-    fn debug_test() {
+    fn it_should_handle_single_argument_functions() {
         let tokens = vec![
                 Token::NewLine,
                 Token::Function,
@@ -943,4 +961,33 @@ mod tests {
         assert_eq!(result.len(), 2);
     }
 
+    #[test]
+    fn it_should_handle_simple_if_statement() {
+        let tokens = vec![
+            Token::If,
+            Token::LeftParen,
+            Token::Number(2.0),
+            Token::Equals,
+            Token::Equals,
+            Token::DoubleQuote,
+            Token::String("2".into()),
+            Token::DoubleQuote,
+            Token::RightParen,
+            Token::LeftCurlyBrace,
+            Token::Number(6.0),
+            Token::Semicolon,
+            Token::RightCurlyBrace
+        ];
+        let mut parser = Parser::new(tokens);
+
+        let result = parser.parse();
+        assert_eq!(result[0], Statement::ConditionalStatement(
+            Expression::Operation(
+                Box::new(Expression::NumberLiteral(2.0)),
+                Operator::Equal,
+                Box::new(Expression::String("2".into()))
+            ),
+            Block::new(vec![Statement::ExpressionStatement(Expression::NumberLiteral(6.0))])
+        ));
+    }
 }
