@@ -639,4 +639,50 @@ mod integration_tests {
             result.unwrap(), ExpressionResult::Number(12.0)
         );
     }
+
+    #[test]
+    fn if_statement_true() {
+        let input = "
+            if (2 > 1) {
+                4 + 3;
+            }
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let expression = match &statements[0] {
+            Statement::ConditionalStatement(expression, block) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+
+        let mut env = Environment::new();
+        assert_eq!(statements.len(), 1);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            true, true
+        );
+    }
+
+    #[test]
+    fn if_statement_false() {
+        let input = "
+            if (1 > 2) {
+                4 + 3;
+            }
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let expression = match &statements[0] {
+            Statement::ConditionalStatement(expression, block) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+
+        let mut env = Environment::new();
+        assert_eq!(statements.len(), 1);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            true, true
+        );
+    }
 }

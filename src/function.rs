@@ -2,7 +2,7 @@ use crate::ast::{Block, Expression, ExpressionResult};
 use crate::environment::Environment;
 use crate::interpreter::{eval_statements, eval_expression};
 
-// A Function consists of its arguments, and block.  Maybe also its return is held separately?
+// A Function consists of its arguments, and block to be executed after setting the environment up from arguments
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     arguments: Vec<Expression>,
@@ -37,6 +37,6 @@ impl Function {
                 _ => return Err("SyntaxError: Argument declaration should be of identifier type".to_string())
             }
         }
-        return Ok(eval_statements(self.block.get_statements(), &mut block_env));
+        return self.block.execute_block(&mut block_env);
     }
 }

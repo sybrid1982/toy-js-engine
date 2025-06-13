@@ -49,11 +49,18 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
                 }
             }
             // TODO: should be bubbling the error up or something, instead of returning none
-            // so adjust eval_statement to return Result<Option<ExpressionResult>>?
-
+            // so adjust eval_statement to return Result<Option<ExpressionResult>>?45
             Some(ExpressionResult::Undefined)
         }
-        Statement::ConditionalStatement(condition, block) => todo!()
+        Statement::ConditionalStatement(condition, block) => {
+            if let Ok(expression_result) = eval_expression(condition, env) {
+                if expression_result.coerce_to_bool() {
+                    let mut block_env = env.clone();
+                    let block_result = block.execute_block(&mut block_env);
+                }
+            }
+            return None;
+        }
     }
 }
 
