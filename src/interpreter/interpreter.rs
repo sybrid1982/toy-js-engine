@@ -49,7 +49,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
                 }
             }
             // TODO: should be bubbling the error up or something, instead of returning none
-            // so adjust eval_statement to return Result<Option<ExpressionResult>>?45
+            // so adjust eval_statement to return Result<Option<ExpressionResult>>?
             Some(ExpressionResult::Undefined)
         }
         Statement::ConditionalStatement(condition, block) => {
