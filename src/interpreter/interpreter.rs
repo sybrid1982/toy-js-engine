@@ -56,7 +56,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
             if let Ok(expression_result) = eval_expression(condition, env) {
                 if expression_result.coerce_to_bool() {
                     let mut block_env = env.create_child_env();
-                    let block_result = block.execute_block(&mut block_env);
+                    let _block_result = block.execute_block(&mut block_env);
                     env.merge_child_env(block_env);
                 }
             }

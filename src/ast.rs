@@ -105,10 +105,6 @@ impl Block {
         }
     }
 
-    pub fn get_statements(&self) -> Vec<Statement> {
-        return self.statements.clone()
-    }
-
     pub fn execute_block(&self, environment: &mut Environment) -> Result<ExpressionResult, String> {
         return Ok(eval_statements(self.statements.clone(), environment));
     }

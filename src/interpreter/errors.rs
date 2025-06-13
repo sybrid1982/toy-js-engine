@@ -58,14 +58,3 @@ impl Display for InterpreterError {
         write!(f, "{}", self.to_string())
     }
 }
-
-pub fn reference_error(identifier: &str) -> String {
-    format!("Uncaught ReferenceError: {} is not defined", identifier).to_string()
-}
-
-pub fn syntax_error(error: Option<&str>) -> String {
-    match error {
-        Some(error_text) => format!("Uncaught SyntaxError: {}", error_text),
-        None => "Uncaught SyntaxError".to_string(),
-    }
-}

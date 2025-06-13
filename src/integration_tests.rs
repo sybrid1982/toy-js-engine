@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod integration_tests {
-    use crate::interpreter::errors::reference_error;
+    use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind};
     use crate::lexer::tokenize;
     use crate::parser::Parser;
     use crate::interpreter::interpreter::{eval_expression, eval_statement, eval_statements};
@@ -15,9 +15,9 @@ mod integration_tests {
             Statement::ExpressionStatement(expression) => {
                         Statement::ExpressionStatement(expression.clone())
                     },
-            Statement::FunctionDeclaration(identifier, arguments, block) => todo!(),
-            Statement::ReturnStatement(expression) => todo!(),
-            Statement::ConditionalStatement(condition, block) => todo!()
+            Statement::FunctionDeclaration(_identifier, _arguments, _block) => todo!(),
+            Statement::ReturnStatement(_expression) => todo!(),
+            Statement::ConditionalStatement(_condition, _block) => todo!()
         };
         eval_statement(statement, env);
     }
@@ -351,7 +351,7 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression, &mut env);
-        assert!(result.is_err(), "{}", reference_error("x"));
+        assert!(result.is_err(), "{}", InterpreterError{kind: InterpreterErrorKind::ReferenceError("x".into())}.to_string());
     }
 
     #[test]
@@ -603,7 +603,7 @@ mod integration_tests {
             env.has_function("add_three".into())
         );
         assert_eq!(
-            env.get_variable("x".into()).unwrap(), ExpressionResult::Number(10.0)
+            x.unwrap(), ExpressionResult::Number(10.0)
         );
         let result = eval_expression(second_function_call, &mut env);
 

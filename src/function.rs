@@ -1,6 +1,6 @@
 use crate::ast::{Block, Expression, ExpressionResult};
 use crate::environment::Environment;
-use crate::interpreter::{eval_statements, eval_expression};
+use crate::interpreter::{eval_expression};
 
 // A Function consists of its arguments, and block to be executed after setting the environment up from arguments
 #[derive(Clone, Debug, PartialEq)]
