@@ -52,6 +52,10 @@ impl Environment {
         self.functions.insert(identifier, value);
     }
 
+    pub fn has_function(&mut self, identifier: String) -> bool {
+        self.functions.contains_key(&identifier)
+    }
+
     pub fn create_child_env(&mut self) -> Environment {
         let mut child_env = self.clone();
         for (inherited, _) in child_env.variables.values_mut() {
