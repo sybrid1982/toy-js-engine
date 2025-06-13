@@ -651,10 +651,6 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let expression = match &statements[1] {
-            Statement::ConditionalStatement(expression, block) => expression.clone(),
-            _ => Expression::NumberLiteral(-255.0),
-        };
 
         let mut env = Environment::new();
         assert_eq!(statements.len(), 2);
@@ -676,10 +672,6 @@ mod integration_tests {
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let expression = match &statements[1] {
-            Statement::ConditionalStatement(expression, block) => expression.clone(),
-            _ => Expression::NumberLiteral(-255.0),
-        };
 
         let mut env = Environment::new();
         assert_eq!(statements.len(), 2);
@@ -688,5 +680,30 @@ mod integration_tests {
             env.get_variable("x".into()),
             Some(ExpressionResult::Number(3.0))
         );
+    }
+
+    #[test]
+    fn it_does_not_propogate_block_scope_variables_upwards() {
+        let input = "
+            let x = 3;
+            if (x > 2) {
+                let y = 5;
+                ++x;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(4.0))
+        );
+        assert_eq!(
+            env.get_variable("y".into()),
+            None
+        )
     }
 }
