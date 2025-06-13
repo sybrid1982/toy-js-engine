@@ -5,6 +5,7 @@ Basic math operators: +, -, *, /, ( )
 Basic logic operators: &&, ||, !
 Basic comparators: >, <, ==, >=, <=
 Increment and decrement prefixes (--x, ++x)
+Basic assignment and math assignment operators (=, *=, /=, +=, -=)
 Working with booleans, strings, and numbers
 Adding strings and booleans and number coersion
 Defining functions with the function keyword, with return statements returning values
