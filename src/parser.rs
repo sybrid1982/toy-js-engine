@@ -52,6 +52,24 @@ impl Parser {
         self.tokens.get(position).unwrap_or(&Token::EOF)
     }
 
+    fn expect(&mut self, expected: &Token) -> bool {
+        if self.peek() == expected {
+            self.advance();
+            return true;
+        }
+        return false;
+    }
+
+    fn expect_next_n(&mut self, expected: Vec<Token>) -> bool {
+        for (index, expected_token) in expected.iter().enumerate() {
+            if self.peek_at(self.position + index) != expected_token {
+                return false;
+            }
+        }
+        self.position += expected.len();
+        true
+    }
+
     fn remove_wrapping_parens(&mut self) {
         if self.peek_at(0) == &Token::LeftParen {
             self.tokens.remove(0);
@@ -69,14 +87,6 @@ impl Parser {
         before.append(&mut after.to_vec());
         self.tokens = before;
         Parser::new(subset)
-    }
-
-    fn expect(&mut self, expected: &Token) -> bool {
-        if self.peek() == expected {
-            self.advance();
-            return true;
-        }
-        return false;
     }
 
     pub fn parse(&mut self) -> Vec<Statement> {
@@ -203,8 +213,17 @@ impl Parser {
 
     // priority level 2
     fn parse_assignment(&mut self) -> Expression {
-        let mut expr = self.parse_logical_or();
-        if self.peek() == &Token::Equals && self.peek_at(self.position + 1) != &Token::Equals {
+        let mut expr: Expression = self.parse_logical_or();
+
+        if self.expect_next_n(vec![Token::Star, Token::Equals]) {
+            expr = self.create_operator_and_assign(Operator::Multiply, &mut expr);
+        } else if self.expect_next_n(vec![Token::Slash, Token::Equals]) {
+            expr = self.create_operator_and_assign(Operator::Divide, &mut expr);
+        } else if self.expect_next_n(vec![Token::Plus, Token::Equals]) {
+            expr = self.create_operator_and_assign(Operator::Add, &mut expr);
+        } else if self.expect_next_n(vec![Token::Minus, Token::Equals]) {
+            expr = self.create_operator_and_assign(Operator::Subtract, &mut expr);
+        } else if self.peek() == &Token::Equals && self.peek_at(self.position + 1) != &Token::Equals {
             self.advance();
             let right = self.parse_logical_or();
             expr = Expression::Assignment(Box::new(expr), Box::new(right));
@@ -212,10 +231,22 @@ impl Parser {
         expr
     }
 
+    fn create_operator_and_assign(&mut self, operator: Operator, expr: &mut Expression) -> Expression {
+        let right = self.parse_logical_or();
+        Expression::Assignment(
+            Box::new(expr.clone()),
+            Box::new(
+                Expression::Operation(
+                    Box::new(expr.clone()), operator, Box::new(right)
+                )
+            )
+        )
+    }
+    
     // priority level 3
     fn parse_logical_or(&mut self) -> Expression {
         let mut expr = self.parse_logical_and();
-        while self.peek() == &Token::Pipe && self.peek_at(self.position + 1) == &Token::Pipe {
+        if self.peek() == &Token::Pipe && self.peek_at(self.position + 1) == &Token::Pipe {
             self.advance();
             self.advance(); // consume both pipes
             let right = self.parse_logical_and();
@@ -227,7 +258,7 @@ impl Parser {
     // priority level 4
     fn parse_logical_and(&mut self) -> Expression {
         let mut expr = self.parse_equality();
-        while self.peek() == &Token::Ampersand
+        if self.peek() == &Token::Ampersand
             && self.peek_at(self.position + 1) == &Token::Ampersand
         {
             self.advance();
@@ -258,7 +289,7 @@ impl Parser {
     /// priority level 9
     fn parse_comparator(&mut self) -> Expression {
         let mut expr = self.parse_term();
-        while matches!(self.peek(), Token::LeftChevron | Token::RightChevron) {
+        if matches!(self.peek(), Token::LeftChevron | Token::RightChevron) {
             let operator = match self.advance() {
                 Token::LeftChevron => Operator::LessThan,
                 Token::RightChevron => Operator::GreaterThan,
@@ -286,7 +317,7 @@ impl Parser {
     /// priority level 11
     fn parse_term(&mut self) -> Expression {
         let mut expr = self.parse_factor();
-        while matches!(self.peek(), Token::Plus | Token::Minus) {
+        if matches!(self.peek(), Token::Plus | Token::Minus) && self.peek_at(self.position + 1) != &Token::Equals {
             let operator = match self.advance() {
                 Token::Plus => Operator::Add,
                 Token::Minus => Operator::Subtract,
@@ -301,7 +332,7 @@ impl Parser {
     /// priority level 12
     fn parse_factor(&mut self) -> Expression {
         let mut expr = self.parse_unary();
-        while matches!(self.peek(), Token::Star | Token::Slash) {
+        if matches!(self.peek(), Token::Star | Token::Slash) && self.peek_at(self.position + 1) != &Token::Equals {
             let operator = match self.advance() {
                 Token::Star => Operator::Multiply,
                 Token::Slash => Operator::Divide,
@@ -992,8 +1023,8 @@ mod tests {
             Token::RightCurlyBrace
         ];
         let mut parser = Parser::new(tokens);
-
         let result = parser.parse();
+
         assert_eq!(result[0], Statement::ConditionalStatement(
             Expression::Operation(
                 Box::new(Expression::NumberLiteral(2.0)),
@@ -1002,5 +1033,129 @@ mod tests {
             ),
             Block::new(vec![Statement::ExpressionStatement(Expression::NumberLiteral(6.0))])
         ));
+    }
+
+    #[test]
+    fn it_should_handle_star_equals() {
+        let tokens = vec![
+            Token::Let,
+            Token::Ident("x".into()),
+            Token::Equals,
+            Token::Number(2.0),
+            Token::Semicolon,
+            Token::Ident("x".into()),
+            Token::Star,
+            Token::Equals,
+            Token::Number(4.0),
+            Token::Semicolon
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[1], Statement::ExpressionStatement(
+            Expression::Assignment(
+                Box::new(Expression::Identifier("x".into())),
+                Box::new(Expression::Operation(
+                    Box::new(Expression::Identifier("x".into())),
+                    Operator::Multiply,
+                    Box::new(Expression::NumberLiteral(4.0))
+                ))
+            )
+        ))
+    }
+
+    #[test]
+    fn it_should_handle_slash_equals() {
+        let tokens = vec![
+            Token::Let,
+            Token::Ident("x".into()),
+            Token::Equals,
+            Token::Number(2.0),
+            Token::Semicolon,
+            Token::Ident("x".into()),
+            Token::Slash,
+            Token::Equals,
+            Token::Number(4.0),
+            Token::Semicolon
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[1], Statement::ExpressionStatement(
+            Expression::Assignment(
+                Box::new(Expression::Identifier("x".into())),
+                Box::new(Expression::Operation(
+                    Box::new(Expression::Identifier("x".into())),
+                    Operator::Divide,
+                    Box::new(Expression::NumberLiteral(4.0))
+                ))
+            )
+        ))
+    }
+
+    #[test]
+    fn it_should_handle_plus_equals() {
+        let tokens = vec![
+            Token::Let,
+            Token::Ident("x".into()),
+            Token::Equals,
+            Token::Number(2.0),
+            Token::Semicolon,
+            Token::Ident("x".into()),
+            Token::Plus,
+            Token::Equals,
+            Token::Number(4.0),
+            Token::Semicolon
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[1], Statement::ExpressionStatement(
+            Expression::Assignment(
+                Box::new(Expression::Identifier("x".into())),
+                Box::new(Expression::Operation(
+                    Box::new(Expression::Identifier("x".into())),
+                    Operator::Add,
+                    Box::new(Expression::NumberLiteral(4.0))
+                ))
+            )
+        ))
+    }
+
+    #[test]
+    fn it_should_handle_minus_equals() {
+        let tokens = vec![
+            Token::Let,
+            Token::Ident("x".into()),
+            Token::Equals,
+            Token::Number(2.0),
+            Token::Semicolon,
+            Token::Ident("x".into()),
+            Token::Minus,
+            Token::Equals,
+            Token::Number(4.0),
+            Token::Semicolon
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[1], Statement::ExpressionStatement(
+            Expression::Assignment(
+                Box::new(Expression::Identifier("x".into())),
+                Box::new(Expression::Operation(
+                    Box::new(Expression::Identifier("x".into())),
+                    Operator::Subtract,
+                    Box::new(Expression::NumberLiteral(4.0))
+                ))
+            )
+        ))
     }
 }
