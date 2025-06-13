@@ -706,4 +706,64 @@ mod integration_tests {
             None
         )
     }
+
+    #[test]
+    fn it_handles_less_than_or_equals() {
+        let input = "
+            let x = 0;
+            let y = 0;
+            if (x <= 0) {
+                x = -1;
+            }
+
+            if (x <= 0) {
+                y = 1;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(-1.0))
+        );
+
+        assert_eq!(
+            env.get_variable("y".into()),
+            Some(ExpressionResult::Number(1.0))
+        );
+
+    }
+
+    #[test]
+    fn it_handles_greater_than_or_equals() {
+        let input = "
+            let x = 1;
+            let y = 0;
+            if (x >= 1) {
+                x = 3;
+            }
+            if (x >= 3) {
+                y = 2;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(3.0))
+        );
+        assert_eq!(
+            env.get_variable("y".into()),
+            Some(ExpressionResult::Number(2.0))
+        );
+    }
+
 }

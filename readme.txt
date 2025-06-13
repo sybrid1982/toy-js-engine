@@ -3,7 +3,7 @@ This is a very simple javascript toy engine written in rust for my own education
 ## Current features:
 Basic math operators: +, -, *, /, ( )
 Basic logic operators: &&, ||, !
-Basic comparators: >, <, ==
+Basic comparators: >, <, ==, >=, <=
 Increment and decrement prefixes (--x, ++x)
 Working with booleans, strings, and numbers
 Adding strings and booleans and number coersion
@@ -12,7 +12,6 @@ Calling defined functions
 If statements (without else/else if)
 
 ## To do:
-Add <= and >=
 Add conditional else and else if
 Fill out more of the operators that are missing from the operator precedence chart
 

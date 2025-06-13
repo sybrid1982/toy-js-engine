@@ -264,8 +264,21 @@ impl Parser {
                 Token::RightChevron => Operator::GreaterThan,
                 _ => unreachable!(),
             };
+            let left = expr.clone();
             let right = self.parse_term();
-            expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
+            expr = Expression::Operation(Box::new(expr), operator, Box::new(right.clone()));
+            if self.expect(&Token::Equals) {
+                let equal_expression = Expression::Operation(
+                    Box::new(left),
+                    Operator::Equal,
+                    Box::new(right)
+                );
+                expr = Expression::Operation(
+                    Box::new(expr),
+                    Operator::Or,
+                    Box::new(equal_expression)
+                );
+            }
         }
         expr
     }
