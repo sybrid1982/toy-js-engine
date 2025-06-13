@@ -643,46 +643,50 @@ mod integration_tests {
     #[test]
     fn if_statement_true() {
         let input = "
+            let x = 3;
             if (2 > 1) {
-                4 + 3;
+                x = 4 + 3;
             }
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let expression = match &statements[0] {
+        let expression = match &statements[1] {
             Statement::ConditionalStatement(expression, block) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
 
         let mut env = Environment::new();
-        assert_eq!(statements.len(), 1);
+        assert_eq!(statements.len(), 2);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
-            true, true
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(7.0))
         );
     }
 
     #[test]
     fn if_statement_false() {
         let input = "
+            let x = 3;
             if (1 > 2) {
-                4 + 3;
+                x = 4 + 3;
             }
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
-        let expression = match &statements[0] {
+        let expression = match &statements[1] {
             Statement::ConditionalStatement(expression, block) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
 
         let mut env = Environment::new();
-        assert_eq!(statements.len(), 1);
+        assert_eq!(statements.len(), 2);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
-            true, true
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(3.0))
         );
     }
 }

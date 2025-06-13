@@ -19,7 +19,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
             let result = eval_expression(expression, env);
             match result {
                 Ok(val) => {
-                    env.set_variable(identifier, val);
+                    env.define_variable(identifier, val);
                 }
                 Err(error) => {
                     println!("{:#?}", error);
@@ -55,8 +55,9 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
         Statement::ConditionalStatement(condition, block) => {
             if let Ok(expression_result) = eval_expression(condition, env) {
                 if expression_result.coerce_to_bool() {
-                    let mut block_env = env.clone();
+                    let mut block_env = env.create_child_env();
                     let block_result = block.execute_block(&mut block_env);
+                    env.merge_child_env(block_env);
                 }
             }
             return None;
