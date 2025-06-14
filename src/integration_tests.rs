@@ -10,14 +10,15 @@ mod integration_tests {
     fn eval_statement_at_index(statements: &Vec<Statement>, env: &mut Environment, index: usize) {
         let statement = match &statements[index] {
             Statement::Let(identifier, expression) => {
-                        Statement::Let(identifier.to_string(), expression.clone())
-                    }
+                                Statement::Let(identifier.to_string(), expression.clone())
+                            }
             Statement::ExpressionStatement(expression) => {
-                        Statement::ExpressionStatement(expression.clone())
-                    },
+                                Statement::ExpressionStatement(expression.clone())
+                            },
             Statement::FunctionDeclaration(_identifier, _arguments, _block) => todo!(),
             Statement::ReturnStatement(_expression) => todo!(),
-            Statement::ConditionalStatement(_condition, _block, _next_conditional) => todo!()
+            Statement::ConditionalStatement(_condition, _block, _next_conditional) => todo!(),
+            Statement::While(_statement) => todo!(),
         };
         eval_statement(statement, env);
     }
@@ -905,6 +906,27 @@ mod integration_tests {
         assert_eq!(
             env.get_variable("x".into()),
             Some(ExpressionResult::Number(4.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_while() {
+        let input = "
+            let x = 0;
+            while (x < 5) {
+                ++x;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(5.0))
         );
     }
 }

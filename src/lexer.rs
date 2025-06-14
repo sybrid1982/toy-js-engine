@@ -28,6 +28,7 @@ pub enum Token {
     Comma,
     If,
     Else,
+    While,
     Unknown(String),
 }
 
@@ -151,7 +152,9 @@ fn evaluate_current_string(tokens: &mut Vec<Token>, current_string: &mut String)
             tokens.push(Token::If)  
         } else if current_string.trim() == "else" {
             tokens.push(Token::Else)  
-        }else if current_string.trim() == "true" || current_string.trim() == "false" {
+        } else if current_string.trim() == "while" {
+            tokens.push(Token::While)
+        } else if current_string.trim() == "true" || current_string.trim() == "false" {
             let bool_value = current_string.trim() == "true";
             tokens.push(Token::Boolean(bool_value));
         } else if is_string_a_number(current_string) {
