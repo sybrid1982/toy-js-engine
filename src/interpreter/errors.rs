@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::lexer::Token;
+
 pub enum InterpreterErrorKind {
     ReferenceError(String),
     SyntaxError(Option<SyntaxErrorKind>),
@@ -9,6 +11,8 @@ pub enum InterpreterErrorKind {
 pub enum SyntaxErrorKind {
     LeftSideAssignmentMustBeIdentifier,
     InvalidLeftSidePrefix,
+    UnexpectedToken(Token),
+    UnexpectedIdentifier(String)
 }
 
 impl SyntaxErrorKind {
@@ -19,6 +23,12 @@ impl SyntaxErrorKind {
             }
             Self::InvalidLeftSidePrefix => {
                 "Invalid left-hand side expression in prefix operation".to_string()
+            }
+            Self::UnexpectedToken(token) => {
+                format!("Unexpected token '{:#?}'", token)
+            }
+            Self::UnexpectedIdentifier(identifier) => {
+                format!("Unexpected identifier '{}'", identifier)
             }
         }
     }
