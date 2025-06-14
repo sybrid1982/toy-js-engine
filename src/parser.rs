@@ -1344,4 +1344,36 @@ mod tests {
 
         assert_eq!(result[0], Ok(while_expression));
     }
+
+    #[test]
+    fn it_should_throw_parser_error_missing_right_paren() {
+        let tokens = vec![
+            Token::If,
+            Token::LeftParen,
+            Token::Ident("x".into()),
+            Token::LeftCurlyBrace,
+            Token::Ident("x".into()),
+            Token::RightCurlyBrace,
+        ];
+
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        assert_eq!(result[0], Err(ParserError { kind: ParserErrorKind::SyntaxError(Some(SyntaxErrorKind::UnexpectedToken(Token::LeftCurlyBrace)))}))
+    }
+
+    #[test]
+    fn it_should_throw_parser_error_missing_right_curly_brace() {
+        let tokens = vec![
+            Token::If,
+            Token::LeftParen,
+            Token::Ident("x".into()),
+            Token::RightParen,
+            Token::LeftCurlyBrace,
+            Token::Ident("x".into()),
+        ];
+
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        assert_eq!(result[0], Err(ParserError { kind: ParserErrorKind::SyntaxError(Some(SyntaxErrorKind::UnexpectedToken(Token::EOF)))}))
+    }
 }
