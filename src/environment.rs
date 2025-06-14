@@ -33,7 +33,7 @@ impl Environment {
         self.variables.insert(identifier, (inherited, value.clone()));
     }
 
-    pub fn has_variable(&mut self, identifier: String) -> bool {
+    pub fn has_variable(&self, identifier: String) -> bool {
         self.variables.contains_key(&identifier)
     }
 

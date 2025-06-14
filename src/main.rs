@@ -1,7 +1,7 @@
 use environment::Environment;
 use lexer::tokenize;
 use parser::Parser;
-use crate::interpreter::interpreter::{eval_statements};
+use crate::{interpreter::interpreter::eval_statements, parser::separate_out_statements_and_parser_errors};
 
 mod lexer;
 mod ast;
@@ -24,7 +24,17 @@ fn main() {
 
         let tokens = tokenize(&input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
-        eval_statements(statements, &mut env);
+        let statement_results = parser.parse();
+
+        let (statements, parser_errors) = separate_out_statements_and_parser_errors(statement_results);
+
+        if parser_errors.len() > 0 {
+            for error in parser_errors {
+                println!("{}", error)
+            }
+        } else {
+            eval_statements(statements, &mut env);
+        }
     }
 }
+

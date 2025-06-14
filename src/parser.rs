@@ -1,7 +1,6 @@
-use std::num::NonZeroUsize;
-
 use crate::{
     ast::{Block, Expression, Operator, PrefixOperator, Statement},
+    interpreter::errors::{ParserError, ParserErrorKind, SyntaxErrorKind},
     lexer::Token,
 };
 
@@ -40,7 +39,8 @@ impl Parser {
         }
     }
 
-    fn peek(&self) -> &Token {
+    fn peek(&mut self) -> &Token {
+        self.skip_new_lines();
         self.tokens.get(self.position).unwrap_or(&Token::EOF)
     }
 
@@ -54,9 +54,24 @@ impl Parser {
         self.tokens.get(position).unwrap_or(&Token::EOF)
     }
 
+    fn peek_keep_white_space(&self) -> &Token {
+        self.tokens.get(self.position).unwrap_or(&Token::EOF)
+    }
+
+    fn skip_new_lines(&mut self) {
+        if self.peek_keep_white_space() == &Token::NewLine {
+            while self.peek_keep_white_space() == &Token::NewLine {
+                self.position += 1;
+                if self.position > self.tokens.len() {
+                    break;
+                }
+            }
+        }
+    }
+
     fn expect(&mut self, expected: &Token) -> bool {
         if self.peek() == expected {
-            self.advance();
+            self.position += 1;
             return true;
         }
         return false;
@@ -91,91 +106,94 @@ impl Parser {
         Parser::new(subset)
     }
 
-    pub fn parse(&mut self) -> Vec<Statement> {
-        let mut statements: Vec<Statement> = vec![];
+    fn unexpected_token(&self) -> ParserError {
+        let next_token = self.peek_keep_white_space();
+        let error = match next_token {
+            Token::Ident(name) => SyntaxErrorKind::UnexpectedIdentifier(name.clone()),
+            _ => SyntaxErrorKind::UnexpectedToken(next_token.clone())
+        };
+        ParserError {
+            kind: ParserErrorKind::SyntaxError(Some(error)),
+        }
+    }
 
-        while !matches!(self.peek(), Token::EOF) {
-            if let Some(statement) = self.parse_statement() {
-                statements.push(statement)
-            }
+    pub fn parse(&mut self) -> Vec<Result<Statement, ParserError>> {
+        let mut statements: Vec<Result<Statement, ParserError>> = vec![];
+
+        while !matches!(self.peek(), Token::EOF) && self.position < self.tokens.len() {
+            statements.push(self.parse_statement())
         }
         statements
     }
 
-    // Instead of returning options, we should be returning results, because a return of None
-    // from these top level functions (parse lets, parse function, parse conditional, parse return)
-    // represent syntax errors, usually unexpected token ones
-    fn parse_statement(&mut self) -> Option<Statement> {
+    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.peek() {
             Token::Let => self.parse_let(),
             Token::Function => self.parse_function(),
-            Token::Return => Some(self.parse_return()),
+            Token::Return => Ok(self.parse_return()),
             Token::If => self.parse_conditional(),
             Token::While => self.parse_while(),
-            Token::NewLine => {
-                self.advance();
-                return None;
-            }
             _ => self.parse_expression_statement(),
         }
     }
 
-    fn parse_let(&mut self) -> Option<Statement> {
+    fn parse_let(&mut self) -> Result<Statement, ParserError> {
         self.advance();
         if let Token::Ident(name) = self.advance() {
             if self.expect(&Token::Equals) {
                 let expr = self.parse_expression();
                 self.expect(&Token::Semicolon);
-                Some(Statement::Let(name.clone(), expr))
+                Ok(Statement::Let(name.clone(), expr))
             } else {
-                None
+                Err(self.unexpected_token())
             }
         } else {
-            None
+            Err(self.unexpected_token())
         }
     }
 
-    fn parse_function(&mut self) -> Option<Statement> {
+    fn parse_function(&mut self) -> Result<Statement, ParserError> {
         self.advance();
 
         if let Token::Ident(name) = self.advance() {
             if self.expect(&Token::LeftParen) {
                 // building arguments
                 let arguments = self.parse_arguments();
-                if let Some(block) = self.parse_block() {
-                    return Some(Statement::FunctionDeclaration(name, arguments, block));
+                if let Ok(block) = self.parse_block() {
+                    return Ok(Statement::FunctionDeclaration(name, arguments, block));
                 }
             }
         }
-        None
+        Err(self.unexpected_token())
     }
 
-    fn parse_while(&mut self) -> Option<Statement> {
+    fn parse_while(&mut self) -> Result<Statement, ParserError> {
         self.advance(); // clear the while token
 
-        let conditional_expression = self.parse_paren_wrapped_expression();
-        let block = self.parse_block();
-
-        return Some(
-            Statement::While(
-                Box::new(
-                    Statement::ConditionalStatement(
-                        conditional_expression,
-                        block?,
-                        Box::new(None)
-                    )
-                )
-            )
-        );
+        match self.parse_paren_wrapped_expression() {
+            Ok(conditional_expression) => {
+                match self.parse_block() {
+                    Ok(block) => {
+                        return Ok(Statement::While(Box::new(Statement::ConditionalStatement(
+                            conditional_expression,
+                            block,
+                            Box::new(None),
+                        ))));
+                    }
+                    Err(error) => return Err(error)
+                }
+            }
+            Err(error) => return Err(error)
+        }
     }
 
-    fn parse_conditional(&mut self) -> Option<Statement> {
-        while self.peek() == &Token::NewLine {
-            self.advance();
-        }
+    fn parse_conditional(&mut self) -> Result<Statement, ParserError> {
         let mut conditional_expression = Expression::Boolean(true);
         if self.expect(&Token::If) {
-            conditional_expression = self.parse_paren_wrapped_expression();
+            match self.parse_paren_wrapped_expression() {
+                Ok(expression) => conditional_expression = expression,
+                Err(error) => return Err(error)
+            }
         }
         let block = self.parse_block();
 
@@ -183,32 +201,32 @@ impl Parser {
         while self.peek() == &Token::NewLine {
             self.advance();
         }
-        println!("{:#?}", self.peek());
 
         if self.expect(&Token::Else) {
-            else_conditional = self.parse_conditional();
+            match self.parse_conditional() {
+                Ok(parsed_else) => else_conditional = Some(parsed_else),
+                Err(error) => return Err(error),
+            }
         }
-        return Some(Statement::ConditionalStatement(
+        return Ok(Statement::ConditionalStatement(
             conditional_expression,
             block?,
             Box::new(else_conditional),
         ));
     }
 
-    fn parse_paren_wrapped_expression(&mut self) -> Expression {
+    fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
         if self.expect(&Token::LeftParen) {
-            let mut conditional_expression = self.parse_expression();
+            let conditional_expression = self.parse_expression();
             if !self.expect(&Token::RightParen) {
-                // this is an error
+                return Err(self.unexpected_token());
             }
-            return conditional_expression;
+            return Ok(conditional_expression);
         }
-        // whatever this was, it wasn't a paren wrapped expression
-        // returning false here is a bandaid to work until I move all the parsing
-        // into returning results so I can report syntax errors for missing/unexpected tokens
-        return Expression::Boolean(false);
+
+        return Err(self.unexpected_token());
     }
-    
+
     fn parse_arguments(&mut self) -> Vec<Expression> {
         let mut arguments = vec![];
         while !self.expect(&Token::RightParen) {
@@ -228,36 +246,49 @@ impl Parser {
         self.advance(); // get rid of that return token
         if !matches!(self.peek(), Token::Semicolon | Token::NewLine) {
             let expression = self.parse_expression();
+            self.expect(&Token::Semicolon);
             return Statement::ReturnStatement(Some(expression));
         }
         Statement::ReturnStatement(None)
     }
 
-    fn parse_block(&mut self) -> Option<Block> {
+    fn parse_block(&mut self) -> Result<Block, ParserError> {
         if self.expect(&Token::LeftCurlyBrace) {
             // building the block
-            let mut function_statements = vec![];
+            let mut block_statements = vec![];
             while !self.expect(&Token::RightCurlyBrace) {
-                if let Some(statement) = self.parse_statement() {
-                    function_statements.push(statement)
+                if matches!(
+                    self.peek(),
+                    Token::Semicolon | Token::Comma | Token::NewLine
+                ) {
+                    self.advance();
+                    continue;
                 }
+                let statement_result = self.parse_statement();
+                match statement_result {
+                    Ok(statement) => block_statements.push(statement),
+                    Err(error) => return Err(error),
+                }
+                self.skip_new_lines();
             }
-            return Some(Block::new(function_statements));
+            return Ok(Block::new(block_statements));
         }
-        None
+        Err(self.unexpected_token())
     }
 
-    fn parse_expression_statement(&mut self) -> Option<Statement> {
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
         if matches!(
             self.peek(),
-            Token::Semicolon | Token::RightCurlyBrace | Token::Comma | Token::NewLine
+            Token::Semicolon | Token::Comma | Token::NewLine
         ) {
             self.advance();
-            return None;
+        }
+        if self.peek() == &Token::EOF {
+            return Err(self.unexpected_token())
         }
         let expression = self.parse_expression();
         self.expect(&Token::Semicolon);
-        Some(Statement::ExpressionStatement(expression))
+        Ok(Statement::ExpressionStatement(expression))
     }
 
     fn parse_expression(&mut self) -> Expression {
@@ -353,9 +384,10 @@ impl Parser {
                 _ => unreachable!(),
             };
             let left = expr.clone();
+            let include_equality = self.expect(&Token::Equals);
             let right = self.parse_term();
             expr = Expression::Operation(Box::new(expr), operator, Box::new(right.clone()));
-            if self.expect(&Token::Equals) {
+            if include_equality {
                 let equal_expression =
                     Expression::Operation(Box::new(left), Operator::Equal, Box::new(right));
                 expr =
@@ -498,6 +530,18 @@ impl Parser {
     }
 }
 
+pub fn separate_out_statements_and_parser_errors(statement_results: Vec<Result<Statement, ParserError>>) -> (Vec<Statement>, Vec<ParserError>) {
+    let mut statements = vec![];
+    let mut parser_errors = vec![];
+    for statement_result in statement_results {
+        match statement_result {
+            Ok(statement) => statements.push(statement),
+            Err(err) => parser_errors.push(err)
+        }
+    }
+    (statements, parser_errors)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,7 +553,7 @@ mod tests {
         let result = parser.parse();
         assert_eq!(
             result[0],
-            Statement::ExpressionStatement(Expression::NumberLiteral(24.0))
+            Ok(Statement::ExpressionStatement(Expression::NumberLiteral(24.0)))
         );
     }
 
@@ -528,7 +572,7 @@ mod tests {
             Operator::Add,
             Box::new(Expression::NumberLiteral(3.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -546,7 +590,7 @@ mod tests {
             Operator::Multiply,
             Box::new(Expression::NumberLiteral(3.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -570,7 +614,7 @@ mod tests {
                 Box::new(Expression::NumberLiteral(3.0)),
             )),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -594,7 +638,7 @@ mod tests {
                 Box::new(Expression::NumberLiteral(3.0)),
             ),
         );
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -627,8 +671,8 @@ mod tests {
             String::from("my_other_var"),
             Expression::Identifier(String::from("my_var")),
         );
-        assert_eq!(result[0], expected);
-        assert_eq!(result[1], next_expected);
+        assert_eq!(result[0], Ok(expected));
+        assert_eq!(result[1], Ok(next_expected));
     }
 
     #[test]
@@ -648,7 +692,7 @@ mod tests {
             Operator::Add,
             Box::new(Expression::NumberLiteral(3.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -674,7 +718,7 @@ mod tests {
             Operator::Multiply,
             Box::new(Expression::NumberLiteral(3.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -698,7 +742,7 @@ mod tests {
                 Box::new(Expression::NumberLiteral(2.0)),
             )),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -716,7 +760,7 @@ mod tests {
             Operator::Add,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -734,7 +778,7 @@ mod tests {
             Operator::LessThan,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -752,7 +796,7 @@ mod tests {
             Operator::GreaterThan,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -771,7 +815,7 @@ mod tests {
             Operator::Equal,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -790,7 +834,7 @@ mod tests {
             Operator::And,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -809,7 +853,7 @@ mod tests {
             Operator::Or,
             Box::new(Expression::NumberLiteral(2.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -821,7 +865,7 @@ mod tests {
             PrefixOperator::Not,
             Box::new(Expression::NumberLiteral(0.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -840,7 +884,7 @@ mod tests {
                 Box::new(Expression::NumberLiteral(0.0)),
             )),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -852,7 +896,7 @@ mod tests {
             PrefixOperator::Increment,
             Box::new(Expression::NumberLiteral(0.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -864,7 +908,7 @@ mod tests {
             PrefixOperator::Decrement,
             Box::new(Expression::NumberLiteral(4.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -880,7 +924,7 @@ mod tests {
             Box::new(Expression::Identifier("x".to_string())),
             Box::new(Expression::NumberLiteral(4.0)),
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -909,7 +953,7 @@ mod tests {
             vec![],
             Block::new(expected_block_statements),
         );
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -926,7 +970,7 @@ mod tests {
             Box::new(Expression::Identifier("fake_function".to_string())),
             vec![],
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -944,7 +988,7 @@ mod tests {
             Box::new(Expression::Identifier("fake_function".to_string())),
             vec![Expression::NumberLiteral(3.0)],
         ));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -964,7 +1008,7 @@ mod tests {
             Operator::Add,
             Box::new(Expression::NumberLiteral(3.0)),
         )));
-        assert_eq!(result[0], expected);
+        assert_eq!(result[0], Ok(expected));
     }
 
     #[test]
@@ -1053,9 +1097,7 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let result = parser.parse();
 
-        assert_eq!(
-            result[0],
-            Statement::ConditionalStatement(
+        let expected = Statement::ConditionalStatement(
                 Expression::Operation(
                     Box::new(Expression::NumberLiteral(2.0)),
                     Operator::Equal,
@@ -1065,7 +1107,11 @@ mod tests {
                     Expression::NumberLiteral(6.0)
                 )]),
                 Box::new(None)
-            )
+            );
+
+        assert_eq!(
+            result[0],
+            Ok(expected)
         );
     }
 
@@ -1088,16 +1134,18 @@ mod tests {
 
         assert_eq!(result.len(), 2);
 
-        assert_eq!(
-            result[1],
-            Statement::ExpressionStatement(Expression::Assignment(
+        let expected = Statement::ExpressionStatement(Expression::Assignment(
                 Box::new(Expression::Identifier("x".into())),
                 Box::new(Expression::Operation(
                     Box::new(Expression::Identifier("x".into())),
                     Operator::Multiply,
                     Box::new(Expression::NumberLiteral(4.0))
                 ))
-            ))
+            ));
+
+        assert_eq!(
+            result[1],
+            Ok(expected)
         )
     }
 
@@ -1120,16 +1168,18 @@ mod tests {
 
         assert_eq!(result.len(), 2);
 
-        assert_eq!(
-            result[1],
-            Statement::ExpressionStatement(Expression::Assignment(
+        let expected = Statement::ExpressionStatement(Expression::Assignment(
                 Box::new(Expression::Identifier("x".into())),
                 Box::new(Expression::Operation(
                     Box::new(Expression::Identifier("x".into())),
                     Operator::Divide,
                     Box::new(Expression::NumberLiteral(4.0))
                 ))
-            ))
+            ));
+
+        assert_eq!(
+            result[1],
+            Ok(expected)
         )
     }
 
@@ -1152,16 +1202,18 @@ mod tests {
 
         assert_eq!(result.len(), 2);
 
-        assert_eq!(
-            result[1],
-            Statement::ExpressionStatement(Expression::Assignment(
+        let expected = Statement::ExpressionStatement(Expression::Assignment(
                 Box::new(Expression::Identifier("x".into())),
                 Box::new(Expression::Operation(
                     Box::new(Expression::Identifier("x".into())),
                     Operator::Add,
                     Box::new(Expression::NumberLiteral(4.0))
                 ))
-            ))
+            ));
+
+        assert_eq!(
+            result[1],
+            Ok(expected)
         )
     }
 
@@ -1184,16 +1236,18 @@ mod tests {
 
         assert_eq!(result.len(), 2);
 
-        assert_eq!(
-            result[1],
-            Statement::ExpressionStatement(Expression::Assignment(
+        let expected = Statement::ExpressionStatement(Expression::Assignment(
                 Box::new(Expression::Identifier("x".into())),
                 Box::new(Expression::Operation(
                     Box::new(Expression::Identifier("x".into())),
                     Operator::Subtract,
                     Box::new(Expression::NumberLiteral(4.0))
                 ))
-            ))
+            ));
+
+        assert_eq!(
+            result[1],
+            Ok(expected)
         )
     }
 
@@ -1233,9 +1287,7 @@ mod tests {
             Expression::NumberLiteral(6.0),
         )]);
 
-        assert_eq!(
-            result[0],
-            Statement::ConditionalStatement(
+        let expected = Statement::ConditionalStatement(
                 first_conditional_expression,
                 first_block,
                 Box::new(Some(Statement::ConditionalStatement(
@@ -1245,7 +1297,12 @@ mod tests {
                     )]),
                     Box::new(None)
                 )))
-            )
+            );
+
+
+        assert_eq!(
+            result[0],
+            Ok(expected)
         );
     }
 
@@ -1262,7 +1319,7 @@ mod tests {
             Token::Plus,
             Token::Plus,
             Token::Ident("x".into()),
-            Token::RightCurlyBrace
+            Token::RightCurlyBrace,
         ];
 
         let mut parser = Parser::new(tokens);
@@ -1274,18 +1331,17 @@ mod tests {
             Box::new(Expression::NumberLiteral(3.0)),
         );
 
-        let block = Block::new(vec![Statement::ExpressionStatement(
-            Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into())))
-        )]);
+        let block = Block::new(vec![Statement::ExpressionStatement(Expression::Prefix(
+            PrefixOperator::Increment,
+            Box::new(Expression::Identifier("x".into())),
+        ))]);
 
-        let while_expression = Statement::While(
-            Box::new(Statement::ConditionalStatement(
-                conditional_expression,
-                block,
-                Box::new(None)
-            ))
-        );
+        let while_expression = Statement::While(Box::new(Statement::ConditionalStatement(
+            conditional_expression,
+            block,
+            Box::new(None),
+        )));
 
-        assert_eq!(result[0], while_expression);
+        assert_eq!(result[0], Ok(while_expression));
     }
 }
