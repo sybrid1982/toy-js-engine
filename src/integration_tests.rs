@@ -908,4 +908,25 @@ mod integration_tests {
             Some(ExpressionResult::Number(4.0))
         );
     }
+
+    #[test]
+    fn it_handles_while() {
+        let input = "
+            let x = 0;
+            while (x < 5) {
+                ++x;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(5.0))
+        );
+    }
 }
