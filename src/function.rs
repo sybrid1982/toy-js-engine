@@ -23,9 +23,6 @@ impl Function {
         }
         let mut block_env = parent_env.create_child_env();
         // load arguments into block environment
-        // TODO: changes made to variables that were in the parent env should be trickled up.
-        // rough idea -> maybe variables need to contain a flag as to whether they belonged to the parent block,
-        // and if we change one with that flag, we change it in the parent as well
         for (index, argument) in self.arguments.iter().enumerate() {
             match argument {
                 Expression::Identifier(identifier) => {
@@ -40,5 +37,30 @@ impl Function {
         let result = self.block.execute_block(&mut block_env);
         parent_env.merge_child_env(block_env);
         return result;
+    }
+}
+
+#[cfg(test)]
+mod function_tests {
+    use super::*;
+
+    #[test]
+    fn it_should_throw_error_when_call_with_less_parameters() {
+        let argument = Expression::Identifier("x".into());
+        let block = Block::new(vec![]);
+        let function = Function::new(vec![argument], block);
+        let mut env = Environment::new();
+        let result = function.call(vec![], &mut env);
+        assert_eq!(result, Err("Argument mismatch, function expected 1 arguments, recieved 0".into()));
+    }
+
+    #[test]
+    fn it_should_throw_error_when_call_with_more_parameters() {
+        let argument = Expression::Identifier("x".into());
+        let block = Block::new(vec![]);
+        let function = Function::new(vec![], block);
+        let mut env = Environment::new();
+        let result = function.call(vec![argument], &mut env);
+        assert_eq!(result, Err("Argument mismatch, function expected 0 arguments, recieved 1".into()));
     }
 }
