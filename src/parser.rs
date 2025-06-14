@@ -217,9 +217,9 @@ impl Parser {
 
     fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
         if self.expect(&Token::LeftParen) {
-            let mut conditional_expression = self.parse_expression();
+            let conditional_expression = self.parse_expression();
             if !self.expect(&Token::RightParen) {
-                // this is an error
+                return Err(self.unexpected_token());
             }
             return Ok(conditional_expression);
         }
