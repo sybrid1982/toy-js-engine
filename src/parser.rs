@@ -183,7 +183,6 @@ impl Parser {
         while self.peek() == &Token::NewLine {
             self.advance();
         }
-        println!("{:#?}", self.peek());
 
         if self.expect(&Token::Else) {
             else_conditional = self.parse_conditional();
@@ -353,9 +352,10 @@ impl Parser {
                 _ => unreachable!(),
             };
             let left = expr.clone();
+            let include_equality = self.expect(&Token::Equals);
             let right = self.parse_term();
             expr = Expression::Operation(Box::new(expr), operator, Box::new(right.clone()));
-            if self.expect(&Token::Equals) {
+            if include_equality {
                 let equal_expression =
                     Expression::Operation(Box::new(left), Operator::Equal, Box::new(right));
                 expr =
