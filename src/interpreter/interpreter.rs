@@ -52,12 +52,14 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
             // so adjust eval_statement to return Result<Option<ExpressionResult>>?
             Some(ExpressionResult::Undefined)
         }
-        Statement::ConditionalStatement(condition, block) => {
+        Statement::ConditionalStatement(condition, block, next_conditional) => {
             if let Ok(expression_result) = eval_expression(condition, env) {
                 if expression_result.coerce_to_bool() {
                     let mut block_env = env.create_child_env();
                     let _block_result = block.execute_block(&mut block_env);
                     env.merge_child_env(block_env);
+                } else if let Some(next_conditional_statement) = *next_conditional {
+                    return eval_statement(next_conditional_statement, env);
                 }
             }
             return None;

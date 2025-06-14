@@ -17,7 +17,7 @@ mod integration_tests {
                     },
             Statement::FunctionDeclaration(_identifier, _arguments, _block) => todo!(),
             Statement::ReturnStatement(_expression) => todo!(),
-            Statement::ConditionalStatement(_condition, _block) => todo!()
+            Statement::ConditionalStatement(_condition, _block, _next_conditional) => todo!()
         };
         eval_statement(statement, env);
     }
@@ -834,6 +834,77 @@ mod integration_tests {
         assert_eq!(
             env.get_variable("x".into()),
             Some(ExpressionResult::Number(-1.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_else() {
+        let input = "
+            let x = 2;
+            if (x > 3) {
+                x = 3;
+            } else {
+                x = 1;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(1.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_else_if() {
+        let input = "
+            let x = 2;
+            if (x > 3) {
+                x = 3;
+            } else if (x <= 2 && x > -5) {
+                x = 1;
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(1.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_else_if_else() {
+        let input = "
+            let x = 5;
+            if (x > 6) {
+                x = 3;
+            } else if (x <= 2 && x > -5) {
+                x = 1;
+            } else {
+                x = 4
+            }
+        ";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+
+        let mut env = Environment::new();
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(4.0))
         );
     }
 }
