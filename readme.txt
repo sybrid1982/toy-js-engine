@@ -10,11 +10,11 @@ Working with booleans, strings, and numbers
 Adding strings and booleans and number coersion
 Defining functions with the function keyword, with return statements returning values
 Calling defined functions
-If statements (without else/else if)
+If statements (including else and else if)
 
 ## To do:
-Add conditional else and else if
 Fill out more of the operators that are missing from the operator precedence chart
+Loops (for, while)
 
 run this with cargo run to run the application, and at the empty line, type something simple like "3 + 5 * 6;", should get 33 printed below that.
 Or type "let x = 3 * 5; x + 3;", should see "> 18" as a response.
