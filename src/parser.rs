@@ -170,23 +170,30 @@ impl Parser {
     fn parse_while(&mut self) -> Result<Statement, ParserError> {
         self.advance(); // clear the while token
 
-        let conditional_expression = self.parse_paren_wrapped_expression();
-        let block_option = self.parse_block();
-
-        if let Ok(block) = block_option {
-            return Ok(Statement::While(Box::new(Statement::ConditionalStatement(
-                conditional_expression,
-                block,
-                Box::new(None),
-            ))));
+        match self.parse_paren_wrapped_expression() {
+            Ok(conditional_expression) => {
+                match self.parse_block() {
+                    Ok(block) => {
+                        return Ok(Statement::While(Box::new(Statement::ConditionalStatement(
+                            conditional_expression,
+                            block,
+                            Box::new(None),
+                        ))));
+                    }
+                    Err(error) => return Err(error)
+                }
+            }
+            Err(error) => return Err(error)
         }
-        Err(self.unexpected_token())
     }
 
     fn parse_conditional(&mut self) -> Result<Statement, ParserError> {
         let mut conditional_expression = Expression::Boolean(true);
         if self.expect(&Token::If) {
-            conditional_expression = self.parse_paren_wrapped_expression();
+            match self.parse_paren_wrapped_expression() {
+                Ok(expression) => conditional_expression = expression,
+                Err(error) => return Err(error)
+            }
         }
         let block = self.parse_block();
 
@@ -208,18 +215,16 @@ impl Parser {
         ));
     }
 
-    fn parse_paren_wrapped_expression(&mut self) -> Expression {
+    fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
         if self.expect(&Token::LeftParen) {
             let mut conditional_expression = self.parse_expression();
             if !self.expect(&Token::RightParen) {
                 // this is an error
             }
-            return conditional_expression;
+            return Ok(conditional_expression);
         }
-        // whatever this was, it wasn't a paren wrapped expression
-        // returning false here is a bandaid to work until I move all the parsing
-        // into returning results so I can report syntax errors for missing/unexpected tokens
-        return Expression::Boolean(false);
+
+        return Err(self.unexpected_token());
     }
 
     fn parse_arguments(&mut self) -> Vec<Expression> {
