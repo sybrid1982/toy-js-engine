@@ -21,7 +21,9 @@ pub enum Statement {
     FunctionDeclaration(String, Vec<Expression>, Block),
     ConditionalStatement(Expression, Block, Box<Option<Statement>>),
     ExpressionStatement(Expression),
-    ReturnStatement(Option<Expression>)
+    ReturnStatement(Option<Expression>),
+    // Although this allows any statement, a while statement specifically should only be constructed with a conditional
+    While(Box<Statement>)
 }
 
 #[derive(Clone, Debug, PartialEq)]

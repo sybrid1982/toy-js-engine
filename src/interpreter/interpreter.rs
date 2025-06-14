@@ -16,54 +16,55 @@ pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) -> Exp
 pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<ExpressionResult> {
     match statement {
         Statement::Let(identifier, expression) => {
-            let result = eval_expression(expression, env);
-            match result {
-                Ok(val) => {
-                    env.define_variable(identifier, val);
-                }
-                Err(error) => {
-                    println!("{:#?}", error);
-                }
+                        let result = eval_expression(expression, env);
+                        match result {
+                            Ok(val) => {
+                                env.define_variable(identifier, val);
+                            }
+                            Err(error) => {
+                                println!("{:#?}", error);
+                            }
+                        }
+                        return None;
             }
-            return None;
-        }
         Statement::ExpressionStatement(expression) => {
-            let result = eval_expression(expression, env);
-            if let Ok(value) = result {
-                println!("{}", value)
-            } else if let Err(error) = result {
-                println!("{:#?}", error)
-            }
-            return None;
-        }
-        Statement::FunctionDeclaration(identifier, arguments, block) => {
-            let function = Function::new(arguments, block);
-            env.set_function(identifier, function);
-            return None;
-        }
-        Statement::ReturnStatement(return_expression) => {
-            if let Some(expression) = return_expression {
                 let result = eval_expression(expression, env);
                 if let Ok(value) = result {
-                    return Some(value);
+                    println!("{}", value)
+                } else if let Err(error) = result {
+                    println!("{:#?}", error)
                 }
+                return None;
             }
-            // TODO: should be bubbling the error up or something, instead of returning none
-            // so adjust eval_statement to return Result<Option<ExpressionResult>>?
-            Some(ExpressionResult::Undefined)
-        }
+        Statement::FunctionDeclaration(identifier, arguments, block) => {
+                let function = Function::new(arguments, block);
+                env.set_function(identifier, function);
+                return None;
+            }
+        Statement::ReturnStatement(return_expression) => {
+                if let Some(expression) = return_expression {
+                    let result = eval_expression(expression, env);
+                    if let Ok(value) = result {
+                        return Some(value);
+                    }
+                }
+                // TODO: should be bubbling the error up or something, instead of returning none
+                // so adjust eval_statement to return Result<Option<ExpressionResult>>?
+                Some(ExpressionResult::Undefined)
+            }
         Statement::ConditionalStatement(condition, block, next_conditional) => {
-            if let Ok(expression_result) = eval_expression(condition, env) {
-                if expression_result.coerce_to_bool() {
-                    let mut block_env = env.create_child_env();
-                    let _block_result = block.execute_block(&mut block_env);
-                    env.merge_child_env(block_env);
-                } else if let Some(next_conditional_statement) = *next_conditional {
-                    return eval_statement(next_conditional_statement, env);
+                if let Ok(expression_result) = eval_expression(condition, env) {
+                    if expression_result.coerce_to_bool() {
+                        let mut block_env = env.create_child_env();
+                        let _block_result = block.execute_block(&mut block_env);
+                        env.merge_child_env(block_env);
+                    } else if let Some(next_conditional_statement) = *next_conditional {
+                        return eval_statement(next_conditional_statement, env);
+                    }
                 }
+                return None;
             }
-            return None;
-        }
+        Statement::While(statement) => todo!(),
     }
 }
 

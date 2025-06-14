@@ -10,14 +10,15 @@ mod integration_tests {
     fn eval_statement_at_index(statements: &Vec<Statement>, env: &mut Environment, index: usize) {
         let statement = match &statements[index] {
             Statement::Let(identifier, expression) => {
-                        Statement::Let(identifier.to_string(), expression.clone())
-                    }
+                                Statement::Let(identifier.to_string(), expression.clone())
+                            }
             Statement::ExpressionStatement(expression) => {
-                        Statement::ExpressionStatement(expression.clone())
-                    },
+                                Statement::ExpressionStatement(expression.clone())
+                            },
             Statement::FunctionDeclaration(_identifier, _arguments, _block) => todo!(),
             Statement::ReturnStatement(_expression) => todo!(),
-            Statement::ConditionalStatement(_condition, _block, _next_conditional) => todo!()
+            Statement::ConditionalStatement(_condition, _block, _next_conditional) => todo!(),
+            Statement::While(_statement) => todo!(),
         };
         eval_statement(statement, env);
     }

@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use crate::{
     ast::{Block, Expression, Operator, PrefixOperator, Statement},
     lexer::Token,
@@ -102,18 +104,18 @@ impl Parser {
 
     // Instead of returning options, we should be returning results, because a return of None
     // from these top level functions (parse lets, parse function, parse conditional, parse return)
-    // represent an error in the syntax - instead of the expected tokens, different tokens have appeared instead
-
+    // represent syntax errors, usually unexpected token ones
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.peek() {
             Token::Let => self.parse_let(),
             Token::Function => self.parse_function(),
             Token::Return => Some(self.parse_return()),
+            Token::If => self.parse_conditional(),
+            Token::While => self.parse_while(),
             Token::NewLine => {
                 self.advance();
                 return None;
             }
-            Token::If => self.parse_conditional(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -148,18 +150,32 @@ impl Parser {
         None
     }
 
+    fn parse_while(&mut self) -> Option<Statement> {
+        self.advance(); // clear the while token
+
+        let conditional_expression = self.parse_paren_wrapped_expression();
+        let block = self.parse_block();
+
+        return Some(
+            Statement::While(
+                Box::new(
+                    Statement::ConditionalStatement(
+                        conditional_expression,
+                        block?,
+                        Box::new(None)
+                    )
+                )
+            )
+        );
+    }
+
     fn parse_conditional(&mut self) -> Option<Statement> {
         while self.peek() == &Token::NewLine {
             self.advance();
         }
         let mut conditional_expression = Expression::Boolean(true);
         if self.expect(&Token::If) {
-            if self.expect(&Token::LeftParen) {
-                conditional_expression = self.parse_expression();
-                if !self.expect(&Token::RightParen) {
-                    // this is an error
-                }
-            }
+            conditional_expression = self.parse_paren_wrapped_expression();
         }
         let block = self.parse_block();
 
@@ -179,6 +195,20 @@ impl Parser {
         ));
     }
 
+    fn parse_paren_wrapped_expression(&mut self) -> Expression {
+        if self.expect(&Token::LeftParen) {
+            let mut conditional_expression = self.parse_expression();
+            if !self.expect(&Token::RightParen) {
+                // this is an error
+            }
+            return conditional_expression;
+        }
+        // whatever this was, it wasn't a paren wrapped expression
+        // returning false here is a bandaid to work until I move all the parsing
+        // into returning results so I can report syntax errors for missing/unexpected tokens
+        return Expression::Boolean(false);
+    }
+    
     fn parse_arguments(&mut self) -> Vec<Expression> {
         let mut arguments = vec![];
         while !self.expect(&Token::RightParen) {
@@ -1217,5 +1247,45 @@ mod tests {
                 )))
             )
         );
+    }
+
+    #[test]
+    fn it_should_parse_while() {
+        let tokens = vec![
+            Token::While,
+            Token::LeftParen,
+            Token::Ident("x".into()),
+            Token::LeftChevron,
+            Token::Number(3.0),
+            Token::RightParen,
+            Token::LeftCurlyBrace,
+            Token::Plus,
+            Token::Plus,
+            Token::Ident("x".into()),
+            Token::RightCurlyBrace
+        ];
+
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+
+        let conditional_expression = Expression::Operation(
+            Box::new(Expression::Identifier("x".into())),
+            Operator::LessThan,
+            Box::new(Expression::NumberLiteral(3.0)),
+        );
+
+        let block = Block::new(vec![Statement::ExpressionStatement(
+            Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into())))
+        )]);
+
+        let while_expression = Statement::While(
+            Box::new(Statement::ConditionalStatement(
+                conditional_expression,
+                block,
+                Box::new(None)
+            ))
+        );
+
+        assert_eq!(result[0], while_expression);
     }
 }

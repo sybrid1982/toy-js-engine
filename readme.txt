@@ -16,6 +16,9 @@ If statements (including else and else if)
 Fill out more of the operators that are missing from the operator precedence chart
 Loops (for, while)
 
+## Future:
+Rethink if some of the statement enum variants should have a struct instead of directly having members, to make it easier to limit what gets put into what
+
 run this with cargo run to run the application, and at the empty line, type something simple like "3 + 5 * 6;", should get 33 printed below that.
 Or type "let x = 3 * 5; x + 3;", should see "> 18" as a response.
 
