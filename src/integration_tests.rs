@@ -2,7 +2,7 @@
 mod integration_tests {
     use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind};
     use crate::lexer::tokenize;
-    use crate::parser::Parser;
+    use crate::parser::{Parser, separate_out_statements_and_parser_errors};
     use crate::interpreter::interpreter::{eval_expression, eval_statement, eval_statements};
     use crate::ast::{Expression, ExpressionResult, Statement};
     use crate::environment::Environment;
@@ -31,7 +31,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -46,7 +46,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -61,7 +61,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -76,7 +76,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -91,7 +91,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -106,7 +106,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -121,7 +121,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -136,7 +136,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -151,7 +151,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -166,7 +166,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -181,7 +181,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -196,7 +196,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -211,7 +211,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -226,7 +226,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -241,7 +241,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -256,7 +256,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression,
+            Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
@@ -268,16 +268,21 @@ mod integration_tests {
         let input = "let x = 3;  x > 2 && true";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements, &mut env);
         assert_eq!(
             env.get_variable("x").unwrap_or(ExpressionResult::Number(-255.0)),
             ExpressionResult::Number(3.0)
+        );
+        assert_eq!(
+            0,
+            errors.len()
         );
         let result = eval_expression(expression.clone(), &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(true));
@@ -288,12 +293,14 @@ mod integration_tests {
         let input = "let x = 5; !(x > 3)";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements, &mut env);
         let result = eval_expression(expression.clone(), &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(false));
@@ -304,12 +311,14 @@ mod integration_tests {
         let input = "let x = 1; !(x > 3)";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements, &mut env);
         let result = eval_expression(expression.clone(), &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(true));
@@ -320,12 +329,14 @@ mod integration_tests {
         let input = "let x = 1; !!(x > 3)";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements, &mut env);
         let result = eval_expression(expression.clone(), &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(false));
@@ -336,23 +347,24 @@ mod integration_tests {
         let input = "let x = 3; --x; x == 3;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let third_expression = match &results[2] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statement_at_index(&statements, &mut env, 0);
         assert_eq!(env.get_variable("x").unwrap(), ExpressionResult::Number(3.0));
         let result = eval_expression(expression, &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Number(2.0));
         assert_eq!(env.get_variable("x").unwrap(), ExpressionResult::Number(2.0));
-
-        let expression = match &statements[2] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
-            _ => Expression::NumberLiteral(-255.0),
-        };
-        let result = eval_expression(expression, &mut env).unwrap();
+        let result = eval_expression(third_expression, &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(false));
     }
 
@@ -361,8 +373,9 @@ mod integration_tests {
         let input = "let x = 3; x = 4;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
         eval_statements(statements, &mut env);
 
@@ -375,10 +388,10 @@ mod integration_tests {
         let input = "x = 6;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression, &mut env);
@@ -390,12 +403,14 @@ mod integration_tests {
         let input = "let x = true;  let y = false;  x || y;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[2] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[2] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements, &mut env);
         let result = eval_expression(expression, &mut env);
         assert_eq!(result.unwrap(), ExpressionResult::Boolean(true));
@@ -406,12 +421,14 @@ mod integration_tests {
         let input = "let x = \"apple\";  let y = \"sauce\";  x + y;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[2] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[2] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements, &mut env);
         let stored_value = env.get_variable("x").unwrap();
         assert_eq!(stored_value, ExpressionResult::String("apple".to_string()));
@@ -430,16 +447,17 @@ mod integration_tests {
         let input = "let x = \"apple\";  let y = 5; let z = false;  x + y; x + z;";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[3] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[3] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-        let second_expression = match &statements[4] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let second_expression = match &results[4] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+                        let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
         eval_statements(statements, &mut env);
         let stored_value = env.get_variable("x").unwrap();
@@ -467,25 +485,26 @@ mod integration_tests {
         let second_input = "+x; +y; -x; -y;";
         let tokens = tokenize(&(input.to_owned() + second_input));
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         
         let mut env = Environment::new();
-        let expression = match &statements[2] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[2] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-        let second_expression = match &statements[3] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let second_expression = match &results[3] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-        let third_expression = match &statements[4] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let third_expression = match &results[4] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-        let fourth_expression = match &statements[5] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let fourth_expression = match &results[5] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
         eval_statements(statements, &mut env);
         let stored_value = env.get_variable("x").unwrap();
@@ -517,10 +536,12 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let second_expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-        eval_statement(statements[0].clone(), &mut env);
+        if let Ok(statement) = &statements[0] {
+            eval_statement(statement.clone(), &mut env);
+        }
         assert_eq!(
             env.get_variable("x").unwrap(), ExpressionResult::Boolean(true)
         );
@@ -541,7 +562,7 @@ mod integration_tests {
         let statements = parser.parse();
         let mut env = Environment::new();
         let expression = match &statements[0] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
         let result = eval_expression(expression, &mut env);
@@ -558,12 +579,14 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
@@ -586,12 +609,14 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
@@ -616,14 +641,14 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
 
-        let second_function_call = match &statements[2] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let second_function_call = match &results[2] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
-
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         let x = env.get_variable("x".into());
 
@@ -651,12 +676,14 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
-        let expression = match &statements[1] {
-            Statement::ExpressionStatement(expression) => expression.clone(),
+        let expression = match &results[1] {
+            Ok(Statement::ExpressionStatement(expression)) => expression.clone(),
             _ => Expression::NumberLiteral(-255.0),
         };
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
@@ -681,10 +708,12 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
 
-        let mut env = Environment::new();
+        let mut env: Environment = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         assert_eq!(statements.len(), 2);
+
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -702,10 +731,12 @@ mod integration_tests {
         ";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
 
         let mut env = Environment::new();
-        assert_eq!(statements.len(), 2);
+        assert_eq!(results.len(), 2);
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -725,8 +756,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -754,8 +786,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -784,8 +817,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -806,8 +840,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -823,8 +858,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -841,8 +877,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -859,8 +896,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -881,9 +919,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
-
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -904,9 +942,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
-
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -929,9 +967,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
-
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
@@ -950,9 +988,9 @@ mod integration_tests {
 
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let statements = parser.parse();
-
+        let results = parser.parse();
         let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
         eval_statements(statements.clone(), &mut env);
         assert_eq!(
             env.get_variable("x".into()),
