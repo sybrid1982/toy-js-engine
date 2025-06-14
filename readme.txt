@@ -11,13 +11,15 @@ Adding strings and booleans and number coersion
 Defining functions with the function keyword, with return statements returning values
 Calling defined functions
 If statements (including else and else if)
+While loops
 
 ## To do:
 Fill out more of the operators that are missing from the operator precedence chart
-Loops (for, while)
+For Loops
 
 ## Future:
 Rethink if some of the statement enum variants should have a struct instead of directly having members, to make it easier to limit what gets put into what
+Rework parser to throw errors for unexpected tokens
 
 run this with cargo run to run the application, and at the empty line, type something simple like "3 + 5 * 6;", should get 33 printed below that.
 Or type "let x = 3 * 5; x + 3;", should see "> 18" as a response.
