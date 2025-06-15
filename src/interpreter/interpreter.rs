@@ -3,7 +3,10 @@ use crate::environment::Environment;
 use crate::function::Function;
 use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind, SyntaxErrorKind};
 
-pub fn process_statements(mut statements: Vec<Statement>, env: &mut Environment) -> ExpressionResult {
+pub fn process_statements(
+    mut statements: Vec<Statement>,
+    env: &mut Environment,
+) -> ExpressionResult {
     hoist(&mut statements, env);
     eval_statements(statements, env)
 }
@@ -26,15 +29,15 @@ pub fn hoist(statements: &mut Vec<Statement>, env: &mut Environment) {
             Statement::FunctionDeclaration(identifier, arguments, block) => {
                 let function = Function::new(arguments.clone(), block.clone());
                 env.set_function(identifier.clone(), function);
-            },
+            }
             _ => {}
         }
     }
-    *statements = statements.iter().filter(|statement| {
-        !matches!(statement, Statement::FunctionDeclaration(_,_,_))
-    }).map(|statement| {
-        statement.clone()
-    }).collect::<Vec<Statement>>();
+    *statements = statements
+        .iter()
+        .filter(|statement| !matches!(statement, Statement::FunctionDeclaration(_, _, _)))
+        .map(|statement| statement.clone())
+        .collect::<Vec<Statement>>();
 }
 
 pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<ExpressionResult> {
@@ -84,7 +87,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
         }
         Statement::While(inner_conditional) => {
             match *inner_conditional {
-                Statement::ConditionalStatement(condition, block, _next_conditional ) => {
+                Statement::ConditionalStatement(condition, block, _next_conditional) => {
                     if let Ok(expression_result) = eval_expression(condition, env) {
                         if expression_result.coerce_to_bool() {
                             let mut block_env = env.create_child_env();
@@ -93,12 +96,12 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
                             return eval_statement(repeat_statement, env);
                         }
                     }
-                    return None
-                },
-                _ => panic!("while statement should only contain conditional statement") // This should never be generated, currently
+                    return None;
+                }
+                _ => panic!("while statement should only contain conditional statement"), // This should never be generated, currently
             }
         }
-        _ => None   // This currently only gets hit if we somehow hit a function declaration after hoisting the functions and removing them from the statements, so it should never happen
+        _ => None, // This currently only gets hit if we somehow hit a function declaration after hoisting the functions and removing them from the statements, so it should never happen
     }
 }
 
@@ -266,6 +269,22 @@ fn handle_operation_expression(
             }
             return Err("Could not complete request".to_string());
         }
+        Operator::Exponentiation => {
+            if let Ok(right_result) = eval_expression(*right_hand, env) {
+                if let Ok(right_value) = right_result.coerce_to_number() {
+                    if let Ok(left_result) = eval_expression(*left_hand, env) {
+                        if let Ok(left_value) = left_result.coerce_to_number() {
+                            let value = left_value.powf(right_value);
+                            return Ok(ExpressionResult::Number(value));
+                        }
+                    }
+                }
+            }
+            return Err(InterpreterError {
+                kind: InterpreterErrorKind::NaN,
+            }
+            .to_string());
+        }
     }
 }
 
@@ -427,7 +446,10 @@ mod tests {
         let expression = Expression::Operation(
             Box::new(Expression::Boolean(false)),
             Operator::And,
-            Box::new(Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into()))))
+            Box::new(Expression::Prefix(
+                PrefixOperator::Increment,
+                Box::new(Expression::Identifier("x".into())),
+            )),
         );
         let mut env = Environment::new();
         env.define_variable("x".into(), ExpressionResult::Number(0.0));
@@ -443,7 +465,10 @@ mod tests {
         let expression = Expression::Operation(
             Box::new(Expression::Boolean(true)),
             Operator::Or,
-            Box::new(Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into()))))
+            Box::new(Expression::Prefix(
+                PrefixOperator::Increment,
+                Box::new(Expression::Identifier("x".into())),
+            )),
         );
         let mut env = Environment::new();
         env.define_variable("x".into(), ExpressionResult::Number(0.0));

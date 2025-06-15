@@ -37,6 +37,7 @@ pub enum Operator {
     GreaterThan,
     And,
     Or,
+    Exponentiation
 }
 
 #[derive(Clone, Debug, PartialEq)]

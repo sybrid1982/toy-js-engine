@@ -55,6 +55,23 @@ mod integration_tests {
     }
 
     #[test]
+    fn math_with_exponents() {
+        let input = "2 ** 2 ** 3";
+        // if we do this left to right, would end up with 4 ** 3 => 64
+        // if we do this right to left, would end up with 2 ** 8 => 256
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression,
+            _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Number(256.0));
+    }
+
+    #[test]
     fn negation_of_parentheses() {
         let input = "-(3+2);";
         let tokens = tokenize(input);

@@ -421,17 +421,27 @@ impl Parser {
 
     /// priority level 12
     fn parse_factor(&mut self) -> Expression {
-        let mut expr = self.parse_unary();
+        let mut expr = self.parse_exponentiation();
         if matches!(self.peek(), Token::Star | Token::Slash)
-            && self.peek_at(self.position + 1) != &Token::Equals
+            && !matches!(self.peek_at(self.position + 1), &Token::Equals | &Token::Star)
         {
             let operator = match self.advance() {
                 Token::Star => Operator::Multiply,
                 Token::Slash => Operator::Divide,
                 _ => unreachable!(),
             };
-            let right = self.parse_unary();
+            let right = self.parse_exponentiation();
             expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
+        }
+        expr
+    }
+
+    /// priority level 13
+    fn parse_exponentiation(&mut self) -> Expression {
+        let mut expr = self.parse_unary();
+        if self.expect_next_n(vec![Token::Star, Token::Star]) {
+            let right = self.parse_exponentiation();
+            expr = Expression::Operation(Box::new(expr), Operator::Exponentiation, Box::new(right));
         }
         expr
     }
