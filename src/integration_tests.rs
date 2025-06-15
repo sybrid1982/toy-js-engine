@@ -997,4 +997,27 @@ mod integration_tests {
             Some(ExpressionResult::Number(5.0))
         );
     }
+
+    #[test]
+    fn it_throws_error_when_calling_undefined_function() {
+        let input = "
+            callFunction();
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+        let function_call = match &statements[0] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+
+        let expected_error = eval_expression(function_call, &mut env);
+
+        assert_eq!(
+            Err("Function callFunction not defined".into()),
+            expected_error
+        )
+    }
 }

@@ -401,4 +401,36 @@ mod tests {
         let result = eval_expression(expression, &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Number(15.0));
     }
+
+    #[test]
+    fn test_short_circuit_false_and() {
+        let expression = Expression::Operation(
+            Box::new(Expression::Boolean(false)),
+            Operator::And,
+            Box::new(Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into()))))
+        );
+        let mut env = Environment::new();
+        env.define_variable("x".into(), ExpressionResult::Number(0.0));
+        let _res = eval_expression(expression, &mut env);
+        assert_eq!(
+            ExpressionResult::Number(0.0),
+            env.get_variable("x").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_short_circuit_true_or() {
+        let expression = Expression::Operation(
+            Box::new(Expression::Boolean(true)),
+            Operator::Or,
+            Box::new(Expression::Prefix(PrefixOperator::Increment, Box::new(Expression::Identifier("x".into()))))
+        );
+        let mut env = Environment::new();
+        env.define_variable("x".into(), ExpressionResult::Number(0.0));
+        let _res = eval_expression(expression, &mut env);
+        assert_eq!(
+            ExpressionResult::Number(0.0),
+            env.get_variable("x").unwrap()
+        );
+    }
 }
