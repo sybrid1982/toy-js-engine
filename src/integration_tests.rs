@@ -144,6 +144,36 @@ mod integration_tests {
     }
 
     #[test]
+    fn testing_not_equal_true() {
+        let input = "2 != 1;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression,
+            _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Boolean(true));
+    }
+
+    #[test]
+    fn testing_not_equal_false() {
+        let input = "2 != 2;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression,
+            _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Boolean(false));
+    }
+
+    #[test]
     fn testing_and_true_true() {
         let input = "true && true;";
         let tokens = tokenize(input);

@@ -370,6 +370,11 @@ impl Parser {
                 }
                 _ => {}
             }
+        } else if self.expect_next_n(vec![Token::ExclamationMark, Token::Equals]) {
+            let right = self.parse_comparator();
+            expr = Expression::Prefix(PrefixOperator::Not, Box::new(
+                Expression::Operation(Box::new(expr), Operator::Equal, Box::new(right))
+            ))
         }
         expr
     }
