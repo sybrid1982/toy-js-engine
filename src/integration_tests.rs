@@ -75,8 +75,6 @@ mod integration_tests {
     #[test]
     fn math_with_exponents_testing_precedence() {
         let input = "2 ** 2 ** 3 - 50 * 2";
-        // if we do this left to right, would end up with 4 ** 3 => 64
-        // if we do this right to left, would end up with 2 ** 8 => 256
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let statements = parser.parse();
