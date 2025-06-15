@@ -3,6 +3,11 @@ use crate::environment::Environment;
 use crate::function::Function;
 use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind, SyntaxErrorKind};
 
+pub fn process_statements(mut statements: Vec<Statement>, env: &mut Environment) -> ExpressionResult {
+    hoist(&mut statements, env);
+    eval_statements(statements, env)
+}
+
 pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) -> ExpressionResult {
     for statement in statements {
         let result = eval_statement(statement, env);
@@ -11,6 +16,25 @@ pub fn eval_statements(statements: Vec<Statement>, env: &mut Environment) -> Exp
         }
     }
     ExpressionResult::Undefined
+}
+
+// Function declarations should be parsed
+// If I wanted to support declaring variables with var, I'd also need to hoist those to match how var works
+pub fn hoist(statements: &mut Vec<Statement>, env: &mut Environment) {
+    for statement in &mut *statements {
+        match statement {
+            Statement::FunctionDeclaration(identifier, arguments, block) => {
+                let function = Function::new(arguments.clone(), block.clone());
+                env.set_function(identifier.clone(), function);
+            },
+            _ => {}
+        }
+    }
+    *statements = statements.iter().filter(|statement| {
+        !matches!(statement, Statement::FunctionDeclaration(_,_,_))
+    }).map(|statement| {
+        statement.clone()
+    }).collect::<Vec<Statement>>();
 }
 
 pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<ExpressionResult> {
@@ -35,11 +59,6 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
             } else if let Err(error) = result {
                 println!("{:#?}", error)
             }
-            return None;
-        }
-        Statement::FunctionDeclaration(identifier, arguments, block) => {
-            let function = Function::new(arguments, block);
-            env.set_function(identifier, function);
             return None;
         }
         Statement::ReturnStatement(return_expression) => {
@@ -79,6 +98,7 @@ pub fn eval_statement(statement: Statement, env: &mut Environment) -> Option<Exp
                 _ => panic!("while statement should only contain conditional statement") // This should never be generated, currently
             }
         }
+        _ => None   // This currently only gets hit if we somehow hit a function declaration after hoisting the functions and removing them from the statements, so it should never happen
     }
 }
 

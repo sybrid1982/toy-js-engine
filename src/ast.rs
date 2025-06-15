@@ -1,6 +1,6 @@
 use std::{fmt::Display, num::ParseFloatError};
 
-use crate::{environment::Environment, interpreter::eval_statements};
+use crate::{environment::Environment, interpreter::{eval_statements, process_statements}};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
@@ -108,6 +108,6 @@ impl Block {
     }
 
     pub fn execute_block(&self, environment: &mut Environment) -> Result<ExpressionResult, String> {
-        return Ok(eval_statements(self.statements.clone(), environment));
+        return Ok(process_statements(self.statements.clone(), environment));
     }
 }

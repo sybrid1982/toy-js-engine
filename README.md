@@ -11,6 +11,7 @@ A simple JavaScript interpreter built in Rust for learning and experimentation.
 - Works with booleans, strings and numbers
 - Automatic string and boolean coercion when adding
 - Function declarations with `return` statements
+- Function hoisting inside given scope
 - Calling defined functions
 - `if`, `else if`, and `else` statements
 - `while` loops

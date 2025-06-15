@@ -1,7 +1,7 @@
 use environment::Environment;
 use lexer::tokenize;
 use parser::Parser;
-use crate::{interpreter::interpreter::eval_statements, parser::separate_out_statements_and_parser_errors};
+use crate::{interpreter::{process_statements}, parser::separate_out_statements_and_parser_errors};
 
 mod lexer;
 mod ast;
@@ -33,8 +33,9 @@ fn main() {
                 println!("{}", error)
             }
         } else {
-            eval_statements(statements, &mut env);
+            process_statements(statements, &mut env);
         }
     }
 }
+
 

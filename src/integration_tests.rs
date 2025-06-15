@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod integration_tests {
     use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind};
+    use crate::interpreter::process_statements;
     use crate::lexer::tokenize;
     use crate::parser::{Parser, separate_out_statements_and_parser_errors};
     use crate::interpreter::interpreter::{eval_expression, eval_statement, eval_statements};
@@ -617,7 +618,7 @@ mod integration_tests {
         };
         let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
-        eval_statements(statements.clone(), &mut env);
+        process_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
         assert_eq!(
@@ -647,7 +648,7 @@ mod integration_tests {
         };
         let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
-        eval_statements(statements.clone(), &mut env);
+        process_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
         assert_eq!(
@@ -679,7 +680,7 @@ mod integration_tests {
             _ => Expression::NumberLiteral(-255.0),
         };
         let (statements, errors) = separate_out_statements_and_parser_errors(results);
-        eval_statements(statements.clone(), &mut env);
+        process_statements(statements.clone(), &mut env);
         let x = env.get_variable("x".into());
 
         assert_eq!(
@@ -714,7 +715,7 @@ mod integration_tests {
         };
         let (statements, errors) = separate_out_statements_and_parser_errors(results);
 
-        eval_statements(statements.clone(), &mut env);
+        process_statements(statements.clone(), &mut env);
         let result = eval_expression(expression, &mut env);
 
         assert_eq!(
@@ -1049,5 +1050,38 @@ mod integration_tests {
             Err("Function callFunction not defined".into()),
             expected_error
         )
+    }
+
+    #[test]
+    fn it_hoists_function() {
+        let input = "
+            callFunction();
+            function callFunction() {
+                return 4;
+            }
+        ";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, errors) = separate_out_statements_and_parser_errors(results);
+        let function_call = match &statements[0] {
+            Statement::ExpressionStatement(expression) => expression.clone(),
+            _ => Expression::NumberLiteral(-255.0),
+        };
+
+        process_statements(statements, &mut env);
+
+        let expected_result = eval_expression(function_call, &mut env);
+
+        assert_eq!(
+            ExpressionResult::Number(4.0),
+            expected_result.unwrap()
+        );
+
+        assert_eq!(
+            errors.len(),
+            0
+        );
     }
 }
