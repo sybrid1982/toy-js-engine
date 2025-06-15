@@ -29,6 +29,7 @@ pub enum Token {
     If,
     Else,
     While,
+    Percent,
     Unknown(String),
 }
 
@@ -126,6 +127,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 ',' => {
                     evaluate_current_string(&mut tokens, &mut current_string);
                     tokens.push(Token::Comma);
+                }
+                '%' => {
+                    evaluate_current_string(&mut tokens, &mut current_string);
+                    tokens.push(Token::Percent);
                 }
                 _ => {
                     current_string.push(character);

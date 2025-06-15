@@ -184,7 +184,7 @@ fn handle_operation_expression(
             return handle_comparators(env, &left_hand, &operator, &right_hand);
         }
         // this really only makes sense for values that can be coerced to numbers, and will either return a number or NaN
-        Operator::Multiply | Operator::Divide | Operator::Subtract => {
+        Operator::Multiply | Operator::Divide | Operator::Subtract | Operator::Modulo => {
             if let Ok(left_result) = eval_expression(*left_hand, env) {
                 if let Ok(right_result) = eval_expression(*right_hand, env) {
                     if let Ok(left_as_num) = left_result.coerce_to_number() {
@@ -195,6 +195,8 @@ fn handle_operation_expression(
                                 return Ok(ExpressionResult::Number(left_as_num / right_as_num));
                             } else if operator == Operator::Subtract {
                                 return Ok(ExpressionResult::Number(left_as_num - right_as_num));
+                            } else if operator == Operator::Modulo {
+                                return Ok(ExpressionResult::Number(left_as_num % right_as_num));
                             }
                         }
                     }

@@ -3,7 +3,7 @@
 A simple JavaScript interpreter built in Rust for learning and experimentation.
 
 ## Current Features
-- Basic math operators: `+`, `-`, `*`, `/`, `**`, parentheses
+- Basic math operators: `+`, `-`, `*`, `/`, `**`, `%`, parentheses
 - Logic operators: `&&`, `||`, `!`
 - Comparators: `>`, `<`, `>=`, `<=`, `==`, `!=`
 - Increment and decrement prefixes (`--x`, `++x`)
@@ -15,6 +15,7 @@ A simple JavaScript interpreter built in Rust for learning and experimentation.
 - Calling defined functions
 - `if`, `else if`, and `else` statements
 - `while` loops
+- Short circuiting when evaluating logic operators `&&` and `||`
 
 ## Getting Started
 Build the project with:

@@ -422,12 +422,13 @@ impl Parser {
     /// priority level 12
     fn parse_factor(&mut self) -> Expression {
         let mut expr = self.parse_exponentiation();
-        if matches!(self.peek(), Token::Star | Token::Slash)
+        if matches!(self.peek(), Token::Star | Token::Slash | Token::Percent)
             && !matches!(self.peek_at(self.position + 1), &Token::Equals | &Token::Star)
         {
             let operator = match self.advance() {
                 Token::Star => Operator::Multiply,
                 Token::Slash => Operator::Divide,
+                Token::Percent => Operator::Modulo,
                 _ => unreachable!(),
             };
             let right = self.parse_exponentiation();

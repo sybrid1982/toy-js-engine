@@ -88,6 +88,21 @@ mod integration_tests {
     }
 
     #[test]
+    fn modulo() {
+        let input = "6 % 4";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression,
+            _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Number(2.0));
+    }
+
+    #[test]
     fn negation_of_parentheses() {
         let input = "-(3+2);";
         let tokens = tokenize(input);
