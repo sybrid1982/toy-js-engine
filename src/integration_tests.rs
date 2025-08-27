@@ -103,6 +103,21 @@ mod integration_tests {
     }
 
     #[test]
+    fn chained_addition() {
+        let input = "1 + 2 + 3";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse();
+        let mut env = Environment::new();
+        let expression = match &statements[0] {
+            Ok(Statement::ExpressionStatement(expression)) => expression,
+            _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Number(6.0));
+    }
+
+    #[test]
     fn negation_of_parentheses() {
         let input = "-(3+2);";
         let tokens = tokenize(input);
@@ -277,6 +292,25 @@ mod integration_tests {
         let expression = match &statements[0] {
             Ok(Statement::ExpressionStatement(expression)) => expression,
             _ => &Expression::NumberLiteral(-255.0),
+        };
+        let result = eval_expression(expression.clone(), &mut env).unwrap();
+        assert_eq!(result, ExpressionResult::Boolean(false));
+    }
+
+    #[test]
+    fn chained_logical_and() {
+        let input = "let a = true; let b = true; let c = false; a && b && c;";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let (statements, _errors) = separate_out_statements_and_parser_errors(results);
+        let mut env = Environment::new();
+        eval_statement_at_index(&statements, &mut env, 0);
+        eval_statement_at_index(&statements, &mut env, 1);
+        eval_statement_at_index(&statements, &mut env, 2);
+        let expression = match &statements[3] {
+            Statement::ExpressionStatement(expression) => expression,
+            _ => &Expression::Boolean(true),
         };
         let result = eval_expression(expression.clone(), &mut env).unwrap();
         assert_eq!(result, ExpressionResult::Boolean(false));

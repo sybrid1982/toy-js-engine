@@ -170,32 +170,23 @@ impl Parser {
     fn parse_while(&mut self) -> Result<Statement, ParserError> {
         self.advance(); // clear the while token
 
-        match self.parse_paren_wrapped_expression() {
-            Ok(conditional_expression) => {
-                match self.parse_block() {
-                    Ok(block) => {
-                        return Ok(Statement::While(Box::new(Statement::ConditionalStatement(
-                            conditional_expression,
-                            block,
-                            Box::new(None),
-                        ))));
-                    }
-                    Err(error) => return Err(error)
-                }
-            }
-            Err(error) => return Err(error)
-        }
+        let condition = self.parse_paren_wrapped_expression()?;
+        let block = self.parse_block()?;
+
+        Ok(Statement::While(Box::new(Statement::ConditionalStatement(
+            condition,
+            block,
+            Box::new(None),
+        ))))
     }
 
     fn parse_conditional(&mut self) -> Result<Statement, ParserError> {
         let mut conditional_expression = Expression::Boolean(true);
         if self.expect(&Token::If) {
-            match self.parse_paren_wrapped_expression() {
-                Ok(expression) => conditional_expression = expression,
-                Err(error) => return Err(error)
-            }
+            let condition = self.parse_paren_wrapped_expression()?;
+            conditional_expression = condition;
         }
-        let block = self.parse_block();
+        let block = self.parse_block()?;
 
         let mut else_conditional = None;
         while self.peek() == &Token::NewLine {
@@ -203,16 +194,13 @@ impl Parser {
         }
 
         if self.expect(&Token::Else) {
-            match self.parse_conditional() {
-                Ok(parsed_else) => else_conditional = Some(parsed_else),
-                Err(error) => return Err(error),
-            }
+            else_conditional = Some(self.parse_conditional()?);
         }
-        return Ok(Statement::ConditionalStatement(
+        Ok(Statement::ConditionalStatement(
             conditional_expression,
-            block?,
+            block,
             Box::new(else_conditional),
-        ));
+        ))
     }
 
     fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
@@ -332,119 +320,152 @@ impl Parser {
         )
     }
 
-    // priority level 3
-    fn parse_logical_or(&mut self) -> Expression {
-        let mut expr = self.parse_logical_and();
-        if self.peek() == &Token::Pipe && self.peek_at(self.position + 1) == &Token::Pipe {
-            self.advance();
-            self.advance(); // consume both pipes
-            let right = self.parse_logical_and();
-            expr = Expression::Operation(Box::new(expr), Operator::Or, Box::new(right));
+    fn parse_left_associative<LF, OF>(
+        &mut self,
+        lower_fn: LF,
+        mut op_fn: OF,
+    ) -> Expression
+    where
+        LF: Fn(&mut Parser) -> Expression,
+        OF: Fn(&mut Parser, Expression) -> Option<Expression>,
+    {
+        let mut expr = lower_fn(self);
+        while let Some(new_expr) = op_fn(self, expr.clone()) {
+            expr = new_expr;
         }
         expr
+    }
+
+    // priority level 3
+    fn parse_logical_or(&mut self) -> Expression {
+        self.parse_left_associative(Parser::parse_logical_and, |parser, left| {
+            if parser.peek() == &Token::Pipe && parser.peek_at(parser.position + 1) == &Token::Pipe {
+                parser.advance();
+                parser.advance();
+                let right = parser.parse_logical_and();
+                Some(Expression::Operation(Box::new(left), Operator::Or, Box::new(right)))
+            } else {
+                None
+            }
+        })    
     }
 
     // priority level 4
     fn parse_logical_and(&mut self) -> Expression {
-        let mut expr = self.parse_equality();
-        if self.peek() == &Token::Ampersand && self.peek_at(self.position + 1) == &Token::Ampersand
-        {
-            self.advance();
-            self.advance(); // consume both ampersands
-            let right = self.parse_equality();
-            expr = Expression::Operation(Box::new(expr), Operator::And, Box::new(right));
-        }
-        expr
+        self.parse_left_associative(Parser::parse_equality, |parser, left| {
+            if parser.peek() == &Token::Ampersand
+                && parser.peek_at(parser.position + 1) == &Token::Ampersand
+            {
+                parser.advance();
+                parser.advance();
+                let right = parser.parse_equality();
+                Some(Expression::Operation(Box::new(left), Operator::And, Box::new(right)))
+            } else {
+                None
+            }
+        })    
     }
 
     // Priority level 8
     fn parse_equality(&mut self) -> Expression {
-        let mut expr = self.parse_comparator();
-        if self.peek() == &Token::Equals {
-            match self.peek_at(self.position + 1) {
-                Token::Equals => {
-                    self.advance();
-                    self.advance(); // consume both ampersands
-                    let right = self.parse_comparator();
-                    expr = Expression::Operation(Box::new(expr), Operator::Equal, Box::new(right));
-                }
-                _ => {}
+        self.parse_left_associative(Parser::parse_comparator, |parser, left| {
+            if parser.expect_next_n(vec![Token::Equals, Token::Equals]) {
+                let right = parser.parse_comparator();
+                Some(Expression::Operation(Box::new(left), Operator::Equal, Box::new(right)))
+            } else if parser.expect_next_n(vec![Token::ExclamationMark, Token::Equals]) {
+                let right = parser.parse_comparator();
+                let operation =
+                    Expression::Operation(Box::new(left), Operator::Equal, Box::new(right));
+                Some(Expression::Prefix(PrefixOperator::Not, Box::new(operation)))
+            } else {
+                None
             }
-        } else if self.expect_next_n(vec![Token::ExclamationMark, Token::Equals]) {
-            let right = self.parse_comparator();
-            expr = Expression::Prefix(PrefixOperator::Not, Box::new(
-                Expression::Operation(Box::new(expr), Operator::Equal, Box::new(right))
-            ))
-        }
-        expr
+        })
     }
 
     /// priority level 9
     fn parse_comparator(&mut self) -> Expression {
-        let mut expr = self.parse_term();
-        if matches!(self.peek(), Token::LeftChevron | Token::RightChevron) {
-            let operator = match self.advance() {
-                Token::LeftChevron => Operator::LessThan,
-                Token::RightChevron => Operator::GreaterThan,
-                _ => unreachable!(),
-            };
-            let left = expr.clone();
-            let include_equality = self.expect(&Token::Equals);
-            let right = self.parse_term();
-            expr = Expression::Operation(Box::new(expr), operator, Box::new(right.clone()));
-            if include_equality {
-                let equal_expression =
-                    Expression::Operation(Box::new(left), Operator::Equal, Box::new(right));
-                expr =
-                    Expression::Operation(Box::new(expr), Operator::Or, Box::new(equal_expression));
+        self.parse_left_associative(Parser::parse_term, |parser, left| {
+            if matches!(parser.peek(), Token::LeftChevron | Token::RightChevron) {
+                let operator = match parser.advance() {
+                    Token::LeftChevron => Operator::LessThan,
+                    Token::RightChevron => Operator::GreaterThan,
+                    _ => unreachable!(),
+                };
+                let include_equality = parser.expect(&Token::Equals);
+                let right = parser.parse_term();
+                let mut expr =
+                    Expression::Operation(Box::new(left.clone()), operator, Box::new(right.clone()));
+                if include_equality {
+                    let equal_expression =
+                        Expression::Operation(Box::new(left), Operator::Equal, Box::new(right));
+                    expr = Expression::Operation(
+                        Box::new(expr),
+                        Operator::Or,
+                        Box::new(equal_expression),
+                    );
+                }
+                Some(expr)
+            } else {
+                None
             }
-        }
-        expr
+        })
     }
+
 
     /// priority level 11
     fn parse_term(&mut self) -> Expression {
-        let mut expr = self.parse_factor();
-        if matches!(self.peek(), Token::Plus | Token::Minus)
-            && self.peek_at(self.position + 1) != &Token::Equals
-        {
-            let operator = match self.advance() {
-                Token::Plus => Operator::Add,
-                Token::Minus => Operator::Subtract,
-                _ => unreachable!(),
-            };
-            let right = self.parse_factor();
-            expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
-        }
-        expr
+        self.parse_left_associative(Parser::parse_factor, |parser, left| {
+            if matches!(parser.peek(), Token::Plus | Token::Minus)
+                && parser.peek_at(parser.position + 1) != &Token::Equals
+            {
+                let operator = match parser.advance() {
+                    Token::Plus => Operator::Add,
+                    Token::Minus => Operator::Subtract,
+                    _ => unreachable!(),
+                };
+                let right = parser.parse_factor();
+                Some(Expression::Operation(Box::new(left), operator, Box::new(right)))
+            } else {
+                None
+            }
+        })
     }
+    
 
     /// priority level 12
     fn parse_factor(&mut self) -> Expression {
-        let mut expr = self.parse_exponentiation();
-        if matches!(self.peek(), Token::Star | Token::Slash | Token::Percent)
-            && !matches!(self.peek_at(self.position + 1), &Token::Equals | &Token::Star)
-        {
-            let operator = match self.advance() {
-                Token::Star => Operator::Multiply,
-                Token::Slash => Operator::Divide,
-                Token::Percent => Operator::Modulo,
-                _ => unreachable!(),
-            };
-            let right = self.parse_exponentiation();
-            expr = Expression::Operation(Box::new(expr), operator, Box::new(right));
-        }
-        expr
+        self.parse_left_associative(Parser::parse_exponentiation, |parser, left| {
+            if matches!(parser.peek(), Token::Star | Token::Slash | Token::Percent)
+                && !matches!(
+                    parser.peek_at(parser.position + 1),
+                    &Token::Equals | &Token::Star
+                )
+            {
+                let operator = match parser.advance() {
+                    Token::Star => Operator::Multiply,
+                    Token::Slash => Operator::Divide,
+                    Token::Percent => Operator::Modulo,
+                    _ => unreachable!(),
+                };
+                let right = parser.parse_exponentiation();
+                Some(Expression::Operation(Box::new(left), operator, Box::new(right)))
+            } else {
+                None
+            }
+        })
     }
 
     /// priority level 13
     fn parse_exponentiation(&mut self) -> Expression {
-        let mut expr = self.parse_unary();
-        if self.expect_next_n(vec![Token::Star, Token::Star]) {
-            let right = self.parse_exponentiation();
-            expr = Expression::Operation(Box::new(expr), Operator::Exponentiation, Box::new(right));
-        }
-        expr
+        self.parse_left_associative(Parser::parse_unary, |parser, left| {
+            if parser.expect_next_n(vec![Token::Star, Token::Star]) {
+                let right = parser.parse_exponentiation();
+                Some(Expression::Operation(Box::new(left), Operator::Exponentiation, Box::new(right)))
+            } else {
+                None
+            }
+        })
     }
 
     /// priority level 14
@@ -517,21 +538,22 @@ impl Parser {
         match self.advance() {
             Token::Number(n) => Expression::NumberLiteral(n),
             Token::Ident(name) => {
-                return match self.peek() {
+                let expr = match self.peek() {
                     Token::LeftParen => {
                         self.advance(); // get rid of the left paren
                         let arguments = self.parse_arguments();
-                        return Expression::Call(
+                        Expression::Call(
                             Box::new(Expression::Identifier(name.clone())),
                             arguments,
-                        );
+                        )
                     }
                     _ => Expression::Identifier(name.clone()),
                 };
+                expr
             }
             Token::Boolean(is_true) => Expression::Boolean(is_true),
             Token::DoubleQuote => {
-                let result = match self.advance() {
+                let expr = match self.advance() {
                     Token::String(string) => Expression::String(string),
                     _ => Expression::NumberLiteral(0.0), // not sure how we'd get here right now, just returning 0
                 };
@@ -539,20 +561,22 @@ impl Parser {
                 if self.peek() == &Token::DoubleQuote {
                     self.advance();
                 }
-                return result;
+                expr
             }
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }
 }
 
-pub fn separate_out_statements_and_parser_errors(statement_results: Vec<Result<Statement, ParserError>>) -> (Vec<Statement>, Vec<ParserError>) {
+pub fn separate_out_statements_and_parser_errors(
+    statement_results: Vec<Result<Statement, ParserError>>,
+) -> (Vec<Statement>, Vec<ParserError>) {
     let mut statements = vec![];
     let mut parser_errors = vec![];
     for statement_result in statement_results {
         match statement_result {
             Ok(statement) => statements.push(statement),
-            Err(err) => parser_errors.push(err)
+            Err(err) => parser_errors.push(err),
         }
     }
     (statements, parser_errors)
