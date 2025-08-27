@@ -129,7 +129,7 @@ impl Parser {
         statements
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
+    pub(crate) fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         let token = self.peek().clone();
         let parselet = self.parselet_factory.get_parselet(&token);
         parselet.parse(self)

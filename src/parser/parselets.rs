@@ -71,7 +71,12 @@ impl StatementParselet for IfParselet {
             let condition = parser.parse_paren_wrapped_expression()?;
             conditional_expression = condition;
         }
-        let block = parser.parse_block()?;
+        
+        let block = if parser.peek() == &Token::LeftCurlyBrace { 
+            parser.parse_block()?
+        } else {
+            parser.parse_statement()?.into_block()
+        };
 
         let mut else_conditional = None;
         while parser.peek() == &Token::NewLine {
