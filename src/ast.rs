@@ -1,6 +1,19 @@
 use std::{fmt::Display, num::ParseFloatError};
 
-use crate::{environment::Environment, interpreter::{eval_statements, process_statements}};
+use crate::{
+    environment::Environment,
+    interpreter::{process_statements, visitor::NodeVisitor},
+};
+
+/// Trait representing an AST node that can accept a visitor.
+/// 
+/// The associated `Output` type allows different kinds of nodes to
+/// return different values when visited (e.g. statements vs expressions).
+pub trait Node {
+    type Output;
+
+    fn accept(&self, visitor: &mut dyn NodeVisitor) -> Self::Output;
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
@@ -56,6 +69,22 @@ pub enum ExpressionResult {
     String(String),
     Boolean(bool),
     Undefined
+}
+
+impl Node for Expression {
+    type Output = Result<ExpressionResult, String>;
+
+    fn accept(&self, visitor: &mut dyn NodeVisitor) -> Self::Output {
+        visitor.visit_expression(self)
+    }
+}
+
+impl Node for Statement {
+    type Output = Option<ExpressionResult>;
+
+    fn accept(&self, visitor: &mut dyn NodeVisitor) -> Self::Output {
+        visitor.visit_statement(self)
+    }
 }
 
 impl Display for ExpressionResult {
