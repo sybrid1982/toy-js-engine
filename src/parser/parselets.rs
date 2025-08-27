@@ -126,8 +126,16 @@ impl StatementParselet for StatementExpressionParselet {
     }
 }
 
+/// Factory for statement parselets, dispatching based on token type.
+/// 
+/// `parselets` is a HashMap that maps tokens to their corresponding statement parselet,
+/// enabling dynamic dispatch of parsing logic for different statement types.
+/// 
+/// `default` is the fallback parselet used when no specific parselet is registered for a token.
 pub struct ParseletFactory {
+    /// Maps tokens to their corresponding statement parselet for dispatch.
     parselets: HashMap<Token, Rc<dyn StatementParselet>>,
+    /// Fallback parselet used when no specific parselet is found for a token.
     default: Rc<dyn StatementParselet>
 }
 
