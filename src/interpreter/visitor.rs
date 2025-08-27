@@ -1,9 +1,12 @@
 use crate::ast::{Expression, ExpressionResult, Operator, PrefixOperator, Statement, Node};
 use crate::environment::Environment;
-use crate::interpreter::errors::{InterpreterError, InterpreterErrorKind, SyntaxErrorKind};
+use crate::interpreter::{
+    errors::{InterpreterError, InterpreterErrorKind, SyntaxErrorKind},
+    operators::get_operator_strategy,
+};
 
 /// Trait for visiting AST nodes.
-/// 
+///
 /// Statements return `Option<ExpressionResult>` to allow early returns,
 /// while expressions return a `Result<ExpressionResult, String>` to surface runtime errors.
 pub trait NodeVisitor {
@@ -20,185 +23,33 @@ impl<'a> Evaluator<'a> {
         Self { env }
     }
 
-    fn handle_operation_expression(
-        &mut self,
-        left_hand: &Expression,
-        operator: &Operator,
-        right_hand: &Expression
-    ) -> Result<ExpressionResult, String> {
-        match operator {
-            // currently these operators always treat both sides as boolean
-            Operator::And | Operator::Or => {
-                return self.handle_and_or_with_short_circuiting(left_hand, operator, right_hand);
-            }
-            // currently these operators treat both sides as numbers, and if either side is not a number, return false
-            Operator::LessThan | Operator::GreaterThan => {
-                return self.handle_comparators(left_hand, operator, right_hand);
-            }
-            // this really only makes sense for values that can be coerced to numbers, and will either return a number or NaN
-            Operator::Multiply | Operator::Divide | Operator::Subtract | Operator::Modulo => {
-                if let Ok(left_result) = left_hand.accept(self) {
-                    if let Ok(right_result) = right_hand.accept(self)  {
-                        if let Ok(left_as_num) = left_result.coerce_to_number() {
-                            if let Ok(right_as_num) = right_result.coerce_to_number() {
-                                if *operator == Operator::Multiply {
-                                    return Ok(ExpressionResult::Number(left_as_num * right_as_num));
-                                } else if *operator == Operator::Divide {
-                                    return Ok(ExpressionResult::Number(left_as_num / right_as_num));
-                                } else if *operator == Operator::Subtract {
-                                    return Ok(ExpressionResult::Number(left_as_num - right_as_num));
-                                } else if *operator == Operator::Modulo {
-                                    return Ok(ExpressionResult::Number(left_as_num % right_as_num));
-                                }
-                            }
-                        }
-                    }
-                }
-                return Err(InterpreterError {
-                    kind: InterpreterErrorKind::NaN,
-                }
-                .to_string());
-            }
-            Operator::Add => {
-                if let Ok(left_result) = left_hand.accept(self) {
-                    if let Ok(right_result) = right_hand.accept(self)  {
-                        // if either side is a string, convert both sides to string and concatenate
-                        if matches!(left_result, ExpressionResult::String(_))
-                            || matches!(right_result, ExpressionResult::String(_))
-                        {
-                            let new_string =
-                                left_result.coerce_to_string() + &right_result.coerce_to_string();
-                            return Ok(ExpressionResult::String(new_string));
-                        } else {
-                            // otherwise convert to number and add
-                            // If either side can't convert, return NaN
-                            let left_num_res = left_result.coerce_to_number();
-                            let right_num_res = right_result.coerce_to_number();
-                            if let Ok(left_num) = left_num_res {
-                                if let Ok(right_num) = right_num_res {
-                                    return Ok(ExpressionResult::Number(left_num + right_num));
-                                }
-                            }
-                            return Err(InterpreterError {
-                                kind: InterpreterErrorKind::NaN,
-                            }
-                            .to_string());
-                        }
-                    }
-                }
-                return Err("Could not complete request".to_string());
-            }
-            Operator::Equal => {
-                if let Ok(left_result) = left_hand.accept(self) {
-                    if let Ok(right_result) = right_hand.accept(self)  {
-                        // if either side is a boolean, then check other side for truthiness
-                        if matches!(left_result, ExpressionResult::Boolean(_))
-                            || matches!(right_result, ExpressionResult::Boolean(_))
-                        {
-                            return Ok(ExpressionResult::Boolean(
-                                left_result.coerce_to_bool() == right_result.coerce_to_bool(),
-                            ));
-                        }
-                        // if either side is a number, then try coercion to number
-                        if matches!(left_result, ExpressionResult::Number(_))
-                            || matches!(right_result, ExpressionResult::Number(_))
-                        {
-                            let left_num_res = left_result.coerce_to_number();
-                            let right_num_res = right_result.coerce_to_number();
-                            if let Ok(left_num) = left_num_res {
-                                if let Ok(right_num) = right_num_res {
-                                    return Ok(ExpressionResult::Boolean(left_num == right_num));
-                                }
-                            }
-                            return Err(InterpreterError {
-                                kind: InterpreterErrorKind::NaN,
-                            }
-                            .to_string());
-                        }
-                        // at this point both sides must be strings, check if the strings are the same
-                        return Ok(ExpressionResult::Boolean(
-                            left_result.coerce_to_string() == right_result.coerce_to_string(),
-                        ));
-                    }
-                }
-                return Err("Could not complete request".to_string());
-            }
-            Operator::Exponentiation => {
-                if let Ok(right_result) = right_hand.accept(self)  {
-                    if let Ok(right_value) = right_result.coerce_to_number() {
-                        if let Ok(left_result) = left_hand.accept(self) {
-                            if let Ok(left_value) = left_result.coerce_to_number() {
-                                let value = left_value.powf(right_value);
-                                return Ok(ExpressionResult::Number(value));
-                            }
-                        }
-                    }
-                }
-                return Err(InterpreterError {
-                    kind: InterpreterErrorKind::NaN,
-                }
-                .to_string());
-            }
-        }
-    }
-
-    fn handle_comparators(
+    fn evaluate_operation_expression(
         &mut self,
         left_hand: &Expression,
         operator: &Operator,
         right_hand: &Expression,
     ) -> Result<ExpressionResult, String> {
         let left_result = left_hand.accept(self);
-        let right_result = right_hand.accept(self);
-        if let Ok(left_expression_result) = left_result {
-            if let Ok(right_expression_result) = right_result {
-                if let Ok(left_num) = left_expression_result.coerce_to_number() {
-                    if let Ok(right_num) = right_expression_result.coerce_to_number() {
-                        if *operator == Operator::LessThan {
-                            return Ok(ExpressionResult::Boolean(left_num < right_num));
-                        } else {
-                            return Ok(ExpressionResult::Boolean(left_num > right_num));
-                        }
-                    }
-                }
-            }
-        }
-        return Ok(ExpressionResult::Boolean(false));
-    }
-
-    fn handle_and_or_with_short_circuiting(
-        &mut self,
-        left_hand: &Expression,
-        operator: &Operator,
-        right_hand: &Expression,
-    ) -> Result<ExpressionResult, String> {
-        if let Ok(left_result) = left_hand.accept(self) {
-            let left_bool = left_result.coerce_to_bool();
-            if *operator == Operator::And && left_bool == false {
-                // short circuit, don't eval right hand side, just return false
+        if let Ok(left_value) = left_result {
+            // short circuit behavior for logical operators
+            if *operator == Operator::And && !left_value.coerce_to_bool() {
                 return Ok(ExpressionResult::Boolean(false));
             }
-            if *operator == Operator::Or && left_bool == true {
-                // short circuit, don't eval right hand side, just return true
+            if *operator == Operator::Or && left_value.coerce_to_bool() {
                 return Ok(ExpressionResult::Boolean(true));
-            } else {
-                if let Ok(right_result) = right_hand.accept(self) {
-                    let right_bool = right_result.coerce_to_bool();
-                    if *operator == Operator::And {
-                        return Ok(ExpressionResult::Boolean(left_bool && right_bool));
-                    } else {
-                        return Ok(ExpressionResult::Boolean(left_bool || right_bool));
-                    }
-                }
             }
+            let right_value = right_hand.accept(self)?;
+            let strategy = get_operator_strategy(operator.clone());
+            strategy.apply(left_value, right_value, self.env)
+        } else {
+            Err(InterpreterError {
+                kind: InterpreterErrorKind::SyntaxError(None),
+            }
+            .to_string())
         }
-        Err(InterpreterError {
-            kind: InterpreterErrorKind::SyntaxError(None),
-        }
-        .to_string())
     }
 
-    fn handle_prefix_expression(
+    fn evaluate_prefix_expression(
         &mut self,
         operator: &PrefixOperator,
         expression: &Expression,
@@ -212,8 +63,8 @@ impl<'a> Evaluator<'a> {
                     } else {
                         1.0
                     };
-                    let coersion = value.coerce_to_number();
-                    if let Ok(number) = coersion {
+                    let coercion = value.coerce_to_number();
+                    if let Ok(number) = coercion {
                         return Ok(ExpressionResult::Number(sign * number));
                     } else {
                         return Err(InterpreterError {
@@ -369,10 +220,10 @@ impl<'a> NodeVisitor for Evaluator<'a> {
             }
             Expression::String(string) => Ok(ExpressionResult::String(string.clone())),
             Expression::Prefix(operator, expression) => {
-                self.handle_prefix_expression(operator, expression)
+                self.evaluate_prefix_expression(operator, expression)
             }
             Expression::Operation(left_hand, operator, right_hand) => {
-                self.handle_operation_expression(left_hand, operator, right_hand)
+                self.evaluate_operation_expression(left_hand, operator, right_hand)
             }
             Expression::Assignment(left_hand, right_hand) => match &**left_hand {
                 Expression::Identifier(identifier) => {
