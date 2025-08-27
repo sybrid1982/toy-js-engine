@@ -63,8 +63,8 @@ impl<'a> Evaluator<'a> {
                     } else {
                         1.0
                     };
-                    let coersion = value.coerce_to_number();
-                    if let Ok(number) = coersion {
+                    let coercion = value.coerce_to_number();
+                    if let Ok(number) = coercion {
                         return Ok(ExpressionResult::Number(sign * number));
                     } else {
                         return Err(InterpreterError {

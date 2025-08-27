@@ -89,7 +89,7 @@ impl BinaryOperator for DivideOperator {
         _env: &mut Environment,
     ) -> Result<ExpressionResult, String> {
         if let (Ok(l), Ok(r)) = (left.coerce_to_number(), right.coerce_to_number()) {
-            if r == 0.0 {
+            if r.abs() < f64::EPSILON {
                 Err(InterpreterError {
                     kind: InterpreterErrorKind::DivisionByZero
                 }
