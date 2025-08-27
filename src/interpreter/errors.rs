@@ -5,7 +5,8 @@ use crate::lexer::Token;
 pub enum InterpreterErrorKind {
     ReferenceError(String),
     SyntaxError(Option<SyntaxErrorKind>),
-    NaN
+    NaN,
+    DivisionByZero
 }
 
 #[derive(PartialEq)]
@@ -65,6 +66,9 @@ impl InterpreterError {
             InterpreterErrorKind::NaN => {
                 "NaN".to_string()
             },
+            InterpreterErrorKind::DivisionByZero => {
+                "Infinity".to_string()
+            }
         }
     }
 }
