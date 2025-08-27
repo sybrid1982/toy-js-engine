@@ -2,6 +2,7 @@ use crate::{
     ast::{Block, Expression, Operator, PrefixOperator, Statement},
     interpreter::errors::{ParserError, ParserErrorKind, SyntaxErrorKind},
     lexer::Token,
+    parser::parselets::ParseletFactory,
 };
 
 /// Operator precedence (taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#precedence_and_associativity)
@@ -29,6 +30,7 @@ use crate::{
 pub struct Parser {
     pub tokens: Vec<Token>,
     position: usize,
+    parselet_factory: ParseletFactory,
 }
 
 impl Parser {
@@ -36,15 +38,16 @@ impl Parser {
         Parser {
             tokens,
             position: 0,
+            parselet_factory: ParseletFactory::new()
         }
     }
 
-    fn peek(&mut self) -> &Token {
+    pub fn peek(&mut self) -> &Token {
         self.skip_new_lines();
         self.tokens.get(self.position).unwrap_or(&Token::EOF)
     }
 
-    fn advance(&mut self) -> Token {
+    pub fn advance(&mut self) -> Token {
         let token = self.peek().clone();
         self.position += 1;
         token
@@ -69,7 +72,7 @@ impl Parser {
         }
     }
 
-    fn expect(&mut self, expected: &Token) -> bool {
+    pub fn expect(&mut self, expected: &Token) -> bool {
         if self.peek() == expected {
             self.position += 1;
             return true;
@@ -106,7 +109,7 @@ impl Parser {
         Parser::new(subset)
     }
 
-    fn unexpected_token(&self) -> ParserError {
+    pub fn unexpected_token(&self) -> ParserError {
         let next_token = self.peek_keep_white_space();
         let error = match next_token {
             Token::Ident(name) => SyntaxErrorKind::UnexpectedIdentifier(name.clone()),
@@ -126,84 +129,13 @@ impl Parser {
         statements
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
-        match self.peek() {
-            Token::Let => self.parse_let(),
-            Token::Function => self.parse_function(),
-            Token::Return => Ok(self.parse_return()),
-            Token::If => self.parse_conditional(),
-            Token::While => self.parse_while(),
-            _ => self.parse_expression_statement(),
-        }
+    pub(crate) fn parse_statement(&mut self) -> Result<Statement, ParserError> {
+        let token = self.peek().clone();
+        let parselet = self.parselet_factory.get_parselet(&token);
+        parselet.parse(self)
     }
 
-    fn parse_let(&mut self) -> Result<Statement, ParserError> {
-        self.advance();
-        if let Token::Ident(name) = self.advance() {
-            if self.expect(&Token::Equals) {
-                let expr = self.parse_expression();
-                self.expect(&Token::Semicolon);
-                Ok(Statement::Let(name.clone(), expr))
-            } else {
-                Err(self.unexpected_token())
-            }
-        } else {
-            Err(self.unexpected_token())
-        }
-    }
-
-    fn parse_function(&mut self) -> Result<Statement, ParserError> {
-        self.advance();
-
-        if let Token::Ident(name) = self.advance() {
-            if self.expect(&Token::LeftParen) {
-                // building arguments
-                let arguments = self.parse_arguments();
-                if let Ok(block) = self.parse_block() {
-                    return Ok(Statement::FunctionDeclaration(name, arguments, block));
-                }
-            }
-        }
-        Err(self.unexpected_token())
-    }
-
-    fn parse_while(&mut self) -> Result<Statement, ParserError> {
-        self.advance(); // clear the while token
-
-        let condition = self.parse_paren_wrapped_expression()?;
-        let block = self.parse_block()?;
-
-        Ok(Statement::While(Box::new(Statement::ConditionalStatement(
-            condition,
-            block,
-            Box::new(None),
-        ))))
-    }
-
-    fn parse_conditional(&mut self) -> Result<Statement, ParserError> {
-        let mut conditional_expression = Expression::Boolean(true);
-        if self.expect(&Token::If) {
-            let condition = self.parse_paren_wrapped_expression()?;
-            conditional_expression = condition;
-        }
-        let block = self.parse_block()?;
-
-        let mut else_conditional = None;
-        while self.peek() == &Token::NewLine {
-            self.advance();
-        }
-
-        if self.expect(&Token::Else) {
-            else_conditional = Some(self.parse_conditional()?);
-        }
-        Ok(Statement::ConditionalStatement(
-            conditional_expression,
-            block,
-            Box::new(else_conditional),
-        ))
-    }
-
-    fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
+    pub(crate) fn parse_paren_wrapped_expression(&mut self) -> Result<Expression, ParserError> {
         if self.expect(&Token::LeftParen) {
             let conditional_expression = self.parse_expression();
             if !self.expect(&Token::RightParen) {
@@ -215,7 +147,7 @@ impl Parser {
         return Err(self.unexpected_token());
     }
 
-    fn parse_arguments(&mut self) -> Vec<Expression> {
+    pub(crate) fn parse_arguments(&mut self) -> Vec<Expression> {
         let mut arguments = vec![];
         while !self.expect(&Token::RightParen) {
             if self.peek() == &Token::Comma {
@@ -230,17 +162,7 @@ impl Parser {
         arguments
     }
 
-    fn parse_return(&mut self) -> Statement {
-        self.advance(); // get rid of that return token
-        if !matches!(self.peek(), Token::Semicolon | Token::NewLine) {
-            let expression = self.parse_expression();
-            self.expect(&Token::Semicolon);
-            return Statement::ReturnStatement(Some(expression));
-        }
-        Statement::ReturnStatement(None)
-    }
-
-    fn parse_block(&mut self) -> Result<Block, ParserError> {
+    pub(crate) fn parse_block(&mut self) -> Result<Block, ParserError> {
         if self.expect(&Token::LeftCurlyBrace) {
             // building the block
             let mut block_statements = vec![];
@@ -264,22 +186,7 @@ impl Parser {
         Err(self.unexpected_token())
     }
 
-    fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
-        if matches!(
-            self.peek(),
-            Token::Semicolon | Token::Comma | Token::NewLine
-        ) {
-            self.advance();
-        }
-        if self.peek() == &Token::EOF {
-            return Err(self.unexpected_token())
-        }
-        let expression = self.parse_expression();
-        self.expect(&Token::Semicolon);
-        Ok(Statement::ExpressionStatement(expression))
-    }
-
-    fn parse_expression(&mut self) -> Expression {
+    pub fn parse_expression(&mut self) -> Expression {
         self.parse_assignment()
     }
 

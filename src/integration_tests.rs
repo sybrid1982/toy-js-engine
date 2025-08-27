@@ -1091,6 +1091,70 @@ mod integration_tests {
     }
 
     #[test]
+    fn it_handles_unwrapped_if_block_true() {
+        let input = "let x = 1; if (true) x = 2";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, _errors) = separate_out_statements_and_parser_errors(results);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(2.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_unwrapped_if_block_false() {
+        let input = "let x = 1; if (false) x = 2";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, _errors) = separate_out_statements_and_parser_errors(results);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(1.0))
+        );
+    }
+
+    #[test]
+    fn it_handles_else_not_in_block() {
+        let input = "let x = 1; if (4 < 3) { x = 5} else x = 2";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, _errors) = separate_out_statements_and_parser_errors(results);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(2.0))
+        );
+    }
+
+    #[test]
+    fn it_only_applies_else_when_if_fails() {
+        let input = "let x = 1; if (4 > 3) { x = 5} else x = 2";
+
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let results = parser.parse();
+        let mut env = Environment::new();
+        let (statements, _errors) = separate_out_statements_and_parser_errors(results);
+        eval_statements(statements.clone(), &mut env);
+        assert_eq!(
+            env.get_variable("x".into()),
+            Some(ExpressionResult::Number(5.0))
+        );
+    }
+
+    #[test]
     fn it_handles_while() {
         let input = "
             let x = 0;

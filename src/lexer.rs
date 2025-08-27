@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Let,
@@ -30,6 +32,14 @@ pub enum Token {
     Else,
     While,
     Percent,
+}
+
+impl Eq for Token {}
+
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+    }
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {

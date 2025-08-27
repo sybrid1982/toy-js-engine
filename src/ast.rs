@@ -122,6 +122,12 @@ impl ExpressionResult {
     }
 }
 
+impl Statement {
+    pub fn into_block(self) -> Block {
+        Block::new(vec![self])
+    }
+}
+
 // So far, we've assumed we have to run every statement in order.  However, functions are not run immediately on declaration, and they can be called repeatedly
 // and once completed a function should return back to the next statement from where it was called
 
