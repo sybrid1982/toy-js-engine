@@ -538,21 +538,22 @@ impl Parser {
         match self.advance() {
             Token::Number(n) => Expression::NumberLiteral(n),
             Token::Ident(name) => {
-                return match self.peek() {
+                let expr = match self.peek() {
                     Token::LeftParen => {
                         self.advance(); // get rid of the left paren
                         let arguments = self.parse_arguments();
-                        return Expression::Call(
+                        Expression::Call(
                             Box::new(Expression::Identifier(name.clone())),
                             arguments,
-                        );
+                        )
                     }
                     _ => Expression::Identifier(name.clone()),
                 };
+                expr
             }
             Token::Boolean(is_true) => Expression::Boolean(is_true),
             Token::DoubleQuote => {
-                let result = match self.advance() {
+                let expr = match self.advance() {
                     Token::String(string) => Expression::String(string),
                     _ => Expression::NumberLiteral(0.0), // not sure how we'd get here right now, just returning 0
                 };
@@ -560,20 +561,22 @@ impl Parser {
                 if self.peek() == &Token::DoubleQuote {
                     self.advance();
                 }
-                return result;
+                expr
             }
             _ => Expression::NumberLiteral(0.0), // fallback
         }
     }
 }
 
-pub fn separate_out_statements_and_parser_errors(statement_results: Vec<Result<Statement, ParserError>>) -> (Vec<Statement>, Vec<ParserError>) {
+pub fn separate_out_statements_and_parser_errors(
+    statement_results: Vec<Result<Statement, ParserError>>,
+) -> (Vec<Statement>, Vec<ParserError>) {
     let mut statements = vec![];
     let mut parser_errors = vec![];
     for statement_result in statement_results {
         match statement_result {
             Ok(statement) => statements.push(statement),
-            Err(err) => parser_errors.push(err)
+            Err(err) => parser_errors.push(err),
         }
     }
     (statements, parser_errors)
