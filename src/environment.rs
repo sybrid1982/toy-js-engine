@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn it_should_return_false_on_has_if_variable_undefined() {
-        let mut env = Environment::new();
+        let env = Environment::new();
         assert_eq!(env.has_variable("x".to_string()), false);
     }
 }

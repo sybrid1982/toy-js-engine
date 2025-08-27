@@ -323,7 +323,7 @@ impl Parser {
     fn parse_left_associative<LF, OF>(
         &mut self,
         lower_fn: LF,
-        mut op_fn: OF,
+        op_fn: OF,
     ) -> Expression
     where
         LF: Fn(&mut Parser) -> Expression,

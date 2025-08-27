@@ -30,7 +30,6 @@ pub enum Token {
     Else,
     While,
     Percent,
-    Unknown(String),
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {
